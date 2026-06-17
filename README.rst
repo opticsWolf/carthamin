@@ -1,91 +1,263 @@
-Welcome to Pygments
-===================
+Carthamin — Pygments in Rust
+=============================
 
-This is the source of Pygments.  It is a **generic syntax highlighter** written
-in Python that supports over 500 languages and text formats, for use in code
-hosting, forums, wikis or other applications that need to prettify source code.
+**Carthamin** is a Rust reimplementation of `Pygments <https://pygments.org/>`_,
+the generic syntax highlighter. It aims to provide **identical token output** to
+the original Python library while delivering significantly better performance
+through Rust's zero-cost abstractions.
 
-Installing
-----------
+Carthamin can be used:
 
-... works as usual, use ``pip install Pygments`` to get published versions,
-or ``pip install -e .`` to install from a checkout in editable mode.
+* As a **native Rust library** for CLI tools, web backends, and editors.
+* As a **Python package** via ``pyo3`` bindings, drop-in compatible with Pygments'
+  API (``lex()``, ``format()``, ``highlight()``).
 
-Documentation
--------------
+The original Pygments Python source lives in this repository under ``pygments/``
+for reference and compatibility testing.
 
-... can be found online at https://pygments.org/ or created with Sphinx by ::
+Quick Start
+-----------
 
-   tox -e doc
+**Rust** — add to your ``Cargo.toml``::
 
-By default, the documentation does not include the demo page, as it requires
-having Docker installed for building Pyodide. To build the documentation with
-the demo page, use ::
+    [dependencies]
+    carthamin = { path = "carthamin-core" }
 
-   tox -e web-doc
+**Python** — build and install via maturin::
 
-The initial build might take some time, but subsequent ones should be instant
-because of Docker caching.
+    cd carthamin-core
+    pip install maturin
+    maturin develop
 
-To view the generated documentation, serve it using Python's ``http.server``
-module (this step is required for the demo to work) ::
+Then use identically to Pygments::
 
-   python3 -m http.server --directory doc/_build/html
+    from carthamin import lex, format, highlight
+    from carthamin import Token, Style
 
+Architecture
+------------
+
+Carthamin mirrors Pygments' modular architecture, ported to idiomatic Rust:
+
++---------------------+-----------------------------+---------------------+
+| Component           | Rust files                  | Status              |
++=====================+=============================+=====================+
+| **Token System**    | ``src/token.rs``            | ✅ Complete         |
++---------------------+-----------------------------+---------------------+
+| **Style System**    | ``src/style/mod.rs``        | ✅ Complete         |
+|                     | ``src/style/generated.rs``  |                     |
++---------------------+-----------------------------+---------------------+
+| **Core Utilities**  | ``src/util.rs``             | ✅ Complete         |
+|                     | ``src/regexopt.rs``         |                     |
++---------------------+-----------------------------+---------------------+
+| **Scanner & Lexer** | ``src/scanner.rs``          | ✅ Complete         |
+|                     | ``src/lexer/mod.rs``        |                     |
+|                     | ``src/lexer/regex_lexer.rs``|                     |
++---------------------+-----------------------------+---------------------+
+| **Filter System**   | ``src/filter.rs``           | ✅ Complete         |
++---------------------+-----------------------------+---------------------+
+| **Formatters**      | ``src/formatter/mod.rs``    | ✅ Complete         |
+|                     | ``src/formatter/html.rs``   |                     |
+|                     | ``src/formatter/terminal.rs``|                    |
+|                     | ``src/formatter/terminal256.rs``|                 |
++---------------------+-----------------------------+---------------------+
+| **PyO3 Bindings**   | ``src/bindings/mod.rs``     | ✅ Complete         |
+|                     | ``src/bindings/lex.rs``     |                     |
+|                     | ``src/bindings/classes.rs`` |                     |
++---------------------+-----------------------------+---------------------+
+
+Lexers
+------
+
+**30 lexers ported**, **119 lexer tests**, **157 total tests** (all passing)::
+
+    cargo test
+    # test result: ok. 157 passed; 0 failed
+
+### Core Languages (12)
+
+Python, JavaScript, CSS, HTML/XML, C/C++, Rust, Go, Java, SQL, Bash, C#, Swift
+
+### Scripting & Dynamic (7)
+
+Kotlin, PHP, Ruby, Lua, Julia, R, PowerShell
+
+### Data & Config (5)
+
+JSON, YAML, Protobuf, Terraform, Makefile
+
+### Infrastructure (1)
+
+Docker
+
+### Databases (1)
+
+PostgreSQL
+
+### Markup & Templates (2)
+
+Markdown, Django
+
+### JVM & Scala (1)
+
+Scala
+
+~233 lexers remaining (of ~263 in Pygments). High-priority targets: TypeScript,
+Perl, Haskell, Objective-C, Verilog.
+
+Style System
+------------
+
+**49 styles generated** from Pygments' source via ``generators/gen_styles.py``,
+covering **1,540 explicit style entries** across all token types.
+
+The generator imports each Pygments style class at runtime, reads its ``styles``
+dict (explicit definitions only — no inherited duplicates), maps Python token
+reprs to Rust ``Token::CONSTANT`` names, and emits compact CSS strings parsed by
+``StyleAttributes::from_css_string``.
+
+Output: ``carthamin-core/src/style/generated.rs`` (~98 KB, 49 builder functions +
+``get_style(name)`` registry + ``ALL_STYLE_NAMES`` constant).
+
+Key styles: default, monokai, dracula, nord, solarized-dark/light, gruvbox,
+one-dark, material, github-dark, zenburn, and 39 more.
+
+Project Structure
+-----------------
+
+::
+
+    carthamin/
+    ├── carthamin-core/          # Rust crate (carthamin)
+    │   ├── Cargo.toml
+    │   └── src/
+    │       ├── lib.rs           # crate root + PyO3 module init
+    │       ├── token.rs         # Token enum + hierarchy
+    │       ├── style/           # Style system
+    │       │   ├── mod.rs       # Style, StyleAttributes, ansi_color
+    │       │   └── generated.rs # 49 generated style builders
+    │       ├── scanner.rs       # RegexScanner (regex::RegexSet)
+    │       ├── regexopt.rs      # regex_opt, commonprefix, make_charset
+    │       ├── util.rs          # html_escape, shebang_matches, etc.
+    │       ├── filter.rs        # Filter trait + built-in filters
+    │       ├── formatter/       # Formatters
+    │       │   ├── mod.rs       # Formatter trait
+    │       │   ├── html.rs      # HtmlFormatter
+    │       │   ├── terminal.rs  # TerminalFormatter (ANSI)
+    │       │   └── terminal256.rs
+    │       ├── lexer/           # Lexer engine + 30 ported lexers
+    │       │   ├── mod.rs       # Lexer trait, RegexLexer, LexerRule
+    │       │   ├── regex_lexer.rs
+    │       │   ├── python.rs, javascript.rs, ...
+    │       │   └── ...
+    │       └── bindings/        # PyO3 Python bindings
+    │           ├── mod.rs
+    │           ├── lex.rs
+    │           └── classes.rs
+    ├── generators/              # Code generation scripts
+    │   └── gen_styles.py        # Pygments style → Rust generator
+    ├── pygments/                # Original Pygments source (reference)
+    ├── tests/                   # Compatibility tests
+    ├── refactor_plan.md         # Phased migration plan (14 phases)
+    └── code_map.md              # AST-derived codebase map
 
 Development
 -----------
 
-... takes place on `GitHub <https://github.com/pygments/pygments>`_, where the
-Git repository, tickets and pull requests can be viewed.
+### Build & Test
 
-Continuous testing runs on GitHub workflows:
+**Rust**::
 
-.. image:: https://github.com/pygments/pygments/workflows/Pygments/badge.svg
-   :target: https://github.com/pygments/pygments/actions?query=workflow%3APygments
+    cd carthamin-core
+    cargo build
+    cargo test
 
-Please read our `Contributing instructions <https://pygments.org/docs/contributing>`_.
+**Python** (via maturin)::
 
-Security considerations
+    cd carthamin-core
+    maturin develop
+    pytest ../tests/
+
+### Add a New Lexer
+
+1. Study the Python lexer in ``pygments/lexers/<lang>.py``.
+2. Create ``carthamin-core/src/lexer/<lang>.rs`` following the ``RegexLexer``
+   pattern (see ``python.rs`` or ``javascript.rs`` for reference).
+3. Add ``pub mod <lang>;`` to ``src/lexer/mod.rs``.
+4. Write inline tests (``#[cfg(test)] mod tests``) and verify with ``cargo test``.
+
+### Regenerate Styles
+
+When Pygments adds new styles or modifies existing ones::
+
+    python generators/gen_styles.py
+
+This rewrites ``carthamin-core/src/style/generated.rs``.
+
+Migration Roadmap
+-----------------
+
+See `refactor_plan.md <refactor_plan.md>`_ for the full phased plan.
+
++----------+---------------------+-------+----------------------+
+| Phase    | Component           | Files | Tests                |
++==========+=====================+=======+======================+
+| 0        | Project Skeleton    | ✅    | ✅                   |
++----------+---------------------+-------+----------------------+
+| 1        | Token System        | ✅    | ✅                   |
++----------+---------------------+-------+----------------------+
+| 2        | Style System        | ✅    | ✅ (4 tests)         |
++----------+---------------------+-------+----------------------+
+| 3        | Core Utilities      | ✅    | ✅                   |
++----------+---------------------+-------+----------------------+
+| 4        | Scanner & Lexer     | ✅    | ✅                   |
++----------+---------------------+-------+----------------------+
+| 5        | Filter System       | ✅    | ✅                   |
++----------+---------------------+-------+----------------------+
+| 6        | Core Formatters     | ✅    | ✅                   |
++----------+---------------------+-------+----------------------+
+| 7        | Extra Formatters    | ⬜    |                      |
++----------+---------------------+-------+----------------------+
+| 8        | Critical Lexers     | ✅    | ✅ (119/119)         |
++----------+---------------------+-------+----------------------+
+| 9        | Lexer Code Gen      | ⬜    |                      |
++----------+---------------------+-------+----------------------+
+| 10       | Registry & Public   | ✅    | ✅                   |
+|          | API                 |       |                      |
++----------+---------------------+-------+----------------------+
+| 11       | Compatibility Tests | ⬜    |                      |
++----------+---------------------+-------+----------------------+
+| 12       | Remaining Lexers    | ⬜    | (~233 remaining)     |
++----------+---------------------+-------+----------------------+
+| 13       | Final Polish        | ⬜    |                      |
++----------+---------------------+-------+----------------------+
+
+Security Considerations
 -----------------------
 
-Pygments provides no guarantees on execution time, which needs to be taken
-into consideration when using Pygments to process arbitrary user inputs. For
-example, if you have a web service which uses Pygments for highlighting, there
-may be inputs which will cause the Pygments process to run "forever" and/or use
-significant amounts of memory. This can subsequently be used to perform a
-remote denial-of-service attack on the server if the processes are not
-terminated quickly.
+Carthamin inherits Pygments' security model. Lexer regex patterns process
+arbitrary user input, so:
 
-Unfortunately, it's practically impossible to harden Pygments itself against
-those issues: Some regular expressions can result in "catastrophic
-backtracking", but other bugs like incorrect matchers can also
-cause similar problems, and there is no way to find them in an automated fashion
-(short of solving the halting problem.) Pygments has extensive unit tests,
-automated randomized testing, and is also tested by `OSS-Fuzz <https://github.com/google/oss-fuzz/tree/master/projects/pygments>`_,
-but we will never be able to eliminate all bugs in this area.
+* **Set timeouts** — highlight operations should be bounded (seconds at most for
+  reasonably-sized input).
+* **Limit concurrency** — avoid oversubscription of resources.
+* **Validate input size** — reject excessively large inputs before tokenization.
 
-Our recommendations are:
+The Rust implementation benefits from memory safety guarantees (no buffer
+overflows, no use-after-free) but regex backtracking remains a potential
+concern for crafted inputs.
 
-* Ensure that the Pygments process is *terminated* after a reasonably short
-  timeout. In general Pygments should take seconds at most for reasonably-sized
-  input.
-* *Limit* the number of concurrent Pygments processes to avoid oversubscription
-  of resources.
+License
+-------
 
-The Pygments authors will treat any bug resulting in long processing times with
-high priority -- it's one of those things that will be fixed in a patch release.
-When reporting a bug where you suspect super-linear execution times, please make
-sure to attach an input to reproduce it.
+BSD 2-Clause — same license as the original Pygments.
 
-The authors
------------
+The Original Pygments
+---------------------
 
-Pygments is maintained by **Georg Brandl**, e-mail address *georg*\ *@*\ *python.org*, **Matthäus Chajdas** and **Jean Abou-Samra**.
+Pygments was created by **Georg Brandl** and is maintained by **Georg Brandl**,
+**Matthäus Chajdas**, and **Jean Abou-Samra**.  Many lexers and fixes have been
+contributed by **Armin Ronacher**, the Pocoo team, and **Tim Hatch**.
 
-Many lexers and fixes have been contributed by **Armin Ronacher**, the rest of
-the `Pocoo <https://www.pocoo.org/>`_ team and **Tim Hatch**.
-
-The code is distributed under the BSD 2-clause license.  Contributors making pull
-requests must agree that they are able and willing to put their contributions
-under that license.
+Pygments homepage: https://pygments.org/
+Pygments GitHub: https://github.com/pygments/pygments

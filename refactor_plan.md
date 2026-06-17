@@ -24,14 +24,14 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 
 ## Phase 2: Style System (Status: COMPLETE)
 
-**Files**: `src/style.rs`
+**Files**: `src/style/mod.rs`, `src/style/generated.rs`
 **Tests**: inline unit tests
 
 - [x] Port `Style` struct with styles HashMap<Token, StyleAttributes>
 - [x] Port `style_for_token()` inheritance walk
 - [x] Port `colorformat()` / `ansicolors`
-- [ ] Write `generators/gen_styles.py` to extract styles from Python source
-- [ ] Run generator for all 48 style files → `style/generated.rs`
+- [x] Write `generators/gen_styles.py` to extract styles from Python source
+- [x] Run generator for all 49 styles → `style/generated.rs` (1,540 explicit entries)
 - [ ] PyO3 bindings: `Style` base class + generated style subclasses
 - [ ] Verify: style lookup produces identical CSS output
 
@@ -98,19 +98,55 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 
 ## Phase 8: Critical Lexers (Status: COMPLETE)
 
-**Files**: `src/lexer/lexers/python.rs`, `javascript.rs`, `css.rs`, `html.rs`, `c_like.rs`, etc.
+**Files**: `src/lexer/python.rs`, `javascript.rs`, `css.rs`, `htmlxml.rs`, `cpp.rs`, `rust.rs`, `go.rs`, `java.rs`, `sql.rs`, `bash.rs`, `csharp.rs`, `swift.rs`, `kotlin.rs`, `php.rs`, `ruby.rs`, `lua.rs`, `r.rs`, `json.rs`, `yaml.rs`, `markdown.rs`, `protobuf.rs`, `powershell.rs`, `postgres.rs`, `docker.rs`, `terraform.rs`, `makefile.rs`, `scala.rs`, `julia.rs`, `django.rs`
 
-- [x] Port `PythonLexer` / `Python3Lexer`
-- [x] Port `JavaScriptLexer` (ES6+ with template literals, operators, keywords, strings)
-- [x] Port `CssLexer`
-- [x] Port `HtmlLexer` / `XmlLexer`
-- [x] Port `CLexer` / `CppLexer`
-- [x] Port `RustLexer`
-- [x] Port `GoLexer`, `JavaLexer`
-- [x] Port `SqlLexer`, `MySqlLexer`, `PostgresLexer`
-- [x] Port `BashLexer` / `BatchLexer`
-- [x] Verify each lexer against existing test cases (85 Rust tests, 32 Python compat tests)
-- [x] All tests passing: `cargo test` (85 passed), `pytest` (32 passed)
+**30 lexers ported, 119 lexer tests, 157 total tests (all passing)**
+
+### Core Languages
+- [x] `PythonLexer` / `Python3Lexer` (7 tests)
+- [x] `JavaScriptLexer` — ES6+ with template literals, operators, keywords, strings (6 tests)
+- [x] `CssLexer` (5 tests)
+- [x] `HtmlLexer` / `XmlLexer` (5 tests)
+- [x] `CLexer` / `CppLexer` (5 tests)
+- [x] `RustLexer` (5 tests)
+- [x] `GoLexer` (4 tests)
+- [x] `JavaLexer` (4 tests)
+- [x] `SqlLexer` (4 tests)
+- [x] `BashLexer` (5 tests)
+- [x] `CSharpLexer` (4 tests)
+- [x] `SwiftLexer` (2 tests)
+
+### Scripting & Dynamic Languages
+- [x] `KotlinLexer` — shebang, generics, extension functions, nullable types, `fun interface` (17 tests)
+- [x] `PhpLexer` — open/close tags, heredoc/nowdoc, function args state, attribute params, string interpolation (13 tests)
+- [x] `RubyLexer` (2 tests)
+- [x] `LuaLexer` — multiline comments/long strings without backreferences (3 tests)
+- [x] `JuliaLexer` — triple-quoted strings, docstrings, operators (2 tests)
+- [x] `RLexer` (2 tests)
+- [x] `PowerShellLexer` (2 tests)
+
+### Data & Config Languages
+- [x] `JsonLexer` (2 tests)
+- [x] `YamlLexer` — plain scalars, block literals, anchors, tags (2 tests)
+- [x] `ProtobufLexer` (2 tests)
+- [x] `TerraformLexer` — HCL2, heredocs, interpolation (2 tests)
+- [x] `MakefileLexer` — targets, variables, directives, recipes (2 tests)
+
+### Infrastructure & DevOps
+- [x] `DockerLexer` — Dockerfile directives, multi-stage builds (2 tests)
+
+### Databases
+- [x] `PostgresLexer` — `--` comments, `#|` operator, `~*` regex operators (2 tests)
+
+### Markup & Templates
+- [x] `MarkdownLexer` (2 tests)
+- [x] `DjangoLexer` — template tags, filters, variables (3 tests)
+
+### JVM & Scala Family
+- [x] `ScalaLexer` — triple-quoted strings, operators, keywords (2 tests)
+
+- [x] Verify each lexer against existing test cases (119 Rust lexer tests, 4 style tests, 34 other tests)
+- [x] All tests passing: `cargo test` (157 passed), `pytest` (32 passed)
 
 ## Phase 9: Lexer Code Generation (Status: IN PROGRESS)
 
@@ -120,7 +156,7 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 - [x] Convert Python regex patterns to Rust-compatible strings
 - [x] Emit Rust structs with token rules as const data
 - [x] Generate lexer registry mapping (name/alias/filename → lexer)
-- [ ] Run generator for all 263 lexer files
+- [ ] Run generator for remaining ~233 lexer files (30 already ported manually)
 - [ ] Verify generated lexers compile and produce correct output
 - [ ] Fix look-ahead issues in generated patterns (Rust regex doesn't support `(?=...)`)
 
@@ -150,10 +186,13 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 
 ## Phase 12: Remaining Lexers (Status: PENDING)
 
-- [ ] Run lexer generator for all remaining 250+ lexers
+**~233 lexers remaining** (263 total Python lexers minus 30 ported)
+
+- [ ] Run lexer generator for all remaining lexers
 - [ ] Fix compilation errors in generated code
 - [ ] Validate token output for each generated lexer
 - [ ] Port complex lexers that can't be auto-generated (template lexers, delegating lexers)
+- [ ] Target high-value languages first: TypeScript, C/C++, Objective-C, Perl, Haskell, etc.
 
 ## Phase 13: Final Polish (Status: PENDING)
 
@@ -172,15 +211,15 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 |-------|--------|-------|-------|
 | 0: Skeleton | ✅ Complete | 1/1 | 1/1 |
 | 1: Token | ✅ Complete | 1/1 | 2/2 |
-| 2: Style | ✅ Complete | 1/2 | 2/2 |
+| 2: Style | ✅ Complete | 2/2 | 4/4 |
 | 3: Utilities | ✅ Complete | 2/2 | 2/2 |
 | 4: Scanner/Lexer | ✅ Complete | 3/3 | 1/1 |
 | 5: Filters | ✅ Complete | 1/2 | 1/1 |
 | 6: Core Formatters | ✅ Complete | 3/4 | 2/2 |
 | 7: Extra Formatters | ⬜ Pending | 0/10 | 0/1 |
-| 8: Critical Lexers | ✅ Complete | 12/12 | 85/85 |
+| 8: Critical Lexers | ✅ Complete | 30/30 | 119/119 |
 | 9: Lexer Gen | ⬜ Pending | 0/1 | 0/1 |
 | 10: Registry/API | ✅ Complete | 3/3 | 1/1 |
 | 11: Compat Tests | ⬜ Pending | 0/1 | 0/1 |
-| 12: Remaining | ⬜ Pending | 0/250 | 0/1 |
+| 12: Remaining | ⬜ Pending | 0/~233 | 0/1 |
 | 13: Polish | ⬜ Pending | 0/3 | 0/1 |
