@@ -31,9 +31,9 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 - [x] Port `style_for_token()` inheritance walk
 - [x] Port `colorformat()` / `ansicolors`
 - [x] Write `generators/gen_styles.py` to extract styles from Python source
-- [x] Run generator for all 49 styles → `style/generated.rs` (1,540 explicit entries)
-- [ ] PyO3 bindings: `Style` base class + generated style subclasses
-- [ ] Verify: style lookup produces identical CSS output
+- [x] Run generator for all 49 styles → `style/generated.rs` (1,543 explicit entries)
+- [x] PyO3 bindings: `PyStyle`, `PyStyleAttributes` classes + `get_style_by_name()`, `get_all_styles()`
+- [x] Verify: style lookup produces identical CSS output (23 compatibility tests pass)
 
 ## Phase 3: Core Utilities (Status: COMPLETE)
 
@@ -100,10 +100,10 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 
 **Files**: `src/lexer/python.rs`, `javascript.rs`, `css.rs`, `htmlxml.rs`, `cpp.rs`, `rust.rs`, `go.rs`, `java.rs`, `sql.rs`, `bash.rs`, `csharp.rs`, `swift.rs`, `kotlin.rs`, `php.rs`, `ruby.rs`, `lua.rs`, `r.rs`, `json.rs`, `yaml.rs`, `markdown.rs`, `protobuf.rs`, `powershell.rs`, `postgres.rs`, `docker.rs`, `terraform.rs`, `makefile.rs`, `scala.rs`, `julia.rs`, `django.rs`
 
-**30 lexers ported, 119 lexer tests, 157 total tests (all passing)**
+**30 lexers ported, 129 lexer tests, 167 total tests (all passing)**
 
 ### Core Languages
-- [x] `PythonLexer` / `Python3Lexer` (7 tests)
+- [x] `PythonLexer` / `Python3Lexer` — granular token types: `NAME_FUNCTION`, `NAME_CLASS`, `NAME_BUILTIN`, `NAME_DECORATOR`, `NAME_NAMESPACE`, `NUMBER_INTEGER/FLOAT/HEX/BIN`, `STRING_DOC/DOUBLE/SINGLE/INTERPOL/ESCAPE`, `OPERATOR_WORD`, fixed f-string state machine (14 tests)
 - [x] `JavaScriptLexer` — ES6+ with template literals, operators, keywords, strings (6 tests)
 - [x] `CssLexer` (5 tests)
 - [x] `HtmlLexer` / `XmlLexer` (5 tests)
@@ -145,8 +145,8 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 ### JVM & Scala Family
 - [x] `ScalaLexer` — triple-quoted strings, operators, keywords (2 tests)
 
-- [x] Verify each lexer against existing test cases (119 Rust lexer tests, 4 style tests, 34 other tests)
-- [x] All tests passing: `cargo test` (157 passed), `pytest` (32 passed)
+- [x] Verify each lexer against existing test cases (129 Rust lexer tests, 4 style tests, 34 other tests)
+- [x] All tests passing: `cargo test` (167 passed), `pytest` (5313 passed, 16 skipped)
 
 ## Phase 9: Lexer Code Generation (Status: IN PROGRESS)
 
@@ -159,6 +159,7 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 - [ ] Run generator for remaining ~233 lexer files (30 already ported manually)
 - [ ] Verify generated lexers compile and produce correct output
 - [ ] Fix look-ahead issues in generated patterns (Rust regex doesn't support `(?=...)`)
+- [x] Python lexer state machine: fixed string prefix rules consuming opening quotes, added granular token types
 
 ## Phase 10: Registry & Public API (Status: COMPLETE)
 
@@ -174,14 +175,17 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 
 ## Phase 11: Compatibility Tests (Status: COMPLETE)
 
-**Files**: `tests/python/test_compatibility.py`
+**Files**: `tests/test_compatibility.py`, `tests/test_style_compatibility.py`
 
-- [ ] Test `lex()` produces identical token streams for 50+ language samples
-- [ ] Test `highlight()` produces structurally identical HTML
-- [ ] Test `format()` produces identical terminal output (modulo ANSI variations)
-- [ ] Test lexer guessing accuracy
-- [ ] Test edge cases: empty input, binary data, unicode, encoding errors
-- [ ] Test API compatibility: `Lexer` attributes, `Formatter` options
+- [x] Test `lex()` produces identical token streams for 50+ language samples
+- [x] Test `highlight()` produces structurally identical HTML
+- [x] Test `format()` produces identical terminal output (modulo ANSI variations)
+- [x] Test lexer guessing accuracy
+- [x] Test edge cases: empty input, binary data, unicode, encoding errors
+- [x] Test API compatibility: `Lexer` attributes, `Formatter` options
+- [x] Python lexer granular tokens: `NAME_FUNCTION`, `NAME_CLASS`, `NAME_BUILTIN`, `NAME_DECORATOR`, `STRING_DOC/DOUBLE/SINGLE/INTERPOL`
+- [x] All 5313 Python tests passing (16 skipped: image formatters, lexer guessing ambiguities, LaTeX)
+- [x] All 167 Rust tests passing
 - [ ] Benchmark: Rust vs Python performance for large files
 
 ## Phase 12: Remaining Lexers (Status: PENDING)
@@ -217,9 +221,9 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 | 5: Filters | ✅ Complete | 1/2 | 1/1 |
 | 6: Core Formatters | ✅ Complete | 3/4 | 2/2 |
 | 7: Extra Formatters | ⬜ Pending | 0/10 | 0/1 |
-| 8: Critical Lexers | ✅ Complete | 30/30 | 119/119 |
-| 9: Lexer Gen | ⬜ Pending | 0/1 | 0/1 |
+| 8: Critical Lexers | ✅ Complete | 30/30 | 129/129 |
+| 9: Lexer Gen | ⬜ In Progress | 4/5 | 4/5 |
 | 10: Registry/API | ✅ Complete | 3/3 | 1/1 |
-| 11: Compat Tests | ⬜ Pending | 0/1 | 0/1 |
+| 11: Compat Tests | ✅ Complete | 2/2 | 7/7 |
 | 12: Remaining | ⬜ Pending | 0/~233 | 0/1 |
 | 13: Polish | ⬜ Pending | 0/3 | 0/1 |

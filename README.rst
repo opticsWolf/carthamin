@@ -69,14 +69,19 @@ Carthamin mirrors Pygments' modular architecture, ported to idiomatic Rust:
 Lexers
 ------
 
-**30 lexers ported**, **119 lexer tests**, **157 total tests** (all passing)::
+**30 lexers ported**, **129 lexer tests**, **167 total tests** (all passing)::
 
     cargo test
-    # test result: ok. 157 passed; 0 failed
+    # test result: ok. 167 passed; 0 failed
+
+    pytest ../tests/
+    # 5313 passed, 16 skipped
 
 ### Core Languages (12)
 
-Python, JavaScript, CSS, HTML/XML, C/C++, Rust, Go, Java, SQL, Bash, C#, Swift
+Python (with granular token types: ``NAME_FUNCTION``, ``NAME_CLASS``, ``NAME_BUILTIN``,
+``NAME_DECORATOR``, ``STRING_DOC/DOUBLE/SINGLE/INTERPOL``, ``NUMBER_INTEGER/FLOAT/HEX/BIN``,
+``OPERATOR_WORD``), JavaScript, CSS, HTML/XML, C/C++, Rust, Go, Java, SQL, Bash, C#, Swift
 
 ### Scripting & Dynamic (7)
 
@@ -182,9 +187,11 @@ Development
 
 1. Study the Python lexer in ``pygments/lexers/<lang>.py``.
 2. Create ``carthamin-core/src/lexer/<lang>.rs`` following the ``RegexLexer``
-   pattern (see ``python.rs`` or ``javascript.rs`` for reference).
+   pattern (see ``python.rs`` for granular token types or ``javascript.rs`` for
+   simpler state machines).
 3. Add ``pub mod <lang>;`` to ``src/lexer/mod.rs``.
 4. Write inline tests (``#[cfg(test)] mod tests``) and verify with ``cargo test``.
+5. Add compatibility tests in ``tests/test_compatibility.py`` and verify with ``pytest``.
 
 ### Regenerate Styles
 
@@ -218,14 +225,14 @@ See `refactor_plan.md <refactor_plan.md>`_ for the full phased plan.
 +----------+---------------------+-------+----------------------+
 | 7        | Extra Formatters    | ⬜    |                      |
 +----------+---------------------+-------+----------------------+
-| 8        | Critical Lexers     | ✅    | ✅ (119/119)         |
+| 8        | Critical Lexers     | ✅    | ✅ (129/129)         |
 +----------+---------------------+-------+----------------------+
 | 9        | Lexer Code Gen      | ⬜    |                      |
 +----------+---------------------+-------+----------------------+
 | 10       | Registry & Public   | ✅    | ✅                   |
 |          | API                 |       |                      |
 +----------+---------------------+-------+----------------------+
-| 11       | Compatibility Tests | ⬜    |                      |
+| 11       | Compatibility Tests | ✅    | ✅ (5313 passed)     |
 +----------+---------------------+-------+----------------------+
 | 12       | Remaining Lexers    | ⬜    | (~233 remaining)     |
 +----------+---------------------+-------+----------------------+

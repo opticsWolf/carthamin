@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use crate::token::Token;
 
+pub mod generated;
+
 /// Style attributes for a single token type.
 #[derive(Debug, Clone)]
 pub struct StyleAttributes {
@@ -93,27 +95,71 @@ impl Style {
     }
 
     /// Get the effective style for a token, walking up the inheritance chain.
-    pub fn style_for_token(&self, token: Token) -> &StyleAttributes {
-        // First check direct mapping
-        if let Some(attrs) = self.styles.get(&token) {
-            return attrs;
-        }
-
-        // Walk up the token tree
+    /// Merges attributes from child → parent → default, with child taking priority.
+    pub fn style_for_token(&self, token: Token) -> StyleAttributes {
         let path: Vec<&str> = token.path.iter().copied().collect();
-        for i in (0..path.len()).rev() {
-            let parent_path: Vec<&str> = path[..i].to_vec();
-            // Look up parent token in our styles
-            // For simplicity, we check all known parents
+
+        // Collect attributes from all levels (child first, then parents)
+        let mut result = StyleAttributes::empty();
+
+        // Walk from the most specific token up to root
+        for i in (0..=path.len()).rev() {
+            let parent_path: Vec<&str> = if i == 0 { vec![] } else { path[..i].to_vec() };
+            
+            // Look up this level in our styles
             for (t, attrs) in &self.styles {
-                if t.path.len() == i && t.path.iter().copied().collect::<Vec<_>>() == parent_path {
-                    return attrs;
+                if t.path.len() == parent_path.len() && t.path.iter().copied().collect::<Vec<_>>() == parent_path {
+                    // Merge: only fill in None values from parent
+                    if result.color.is_none() {
+                        result.color = attrs.color.clone();
+                    }
+                    if result.bg.is_none() {
+                        result.bg = attrs.bg.clone();
+                    }
+                    if result.bold.is_none() {
+                        result.bold = attrs.bold;
+                    }
+                    if result.italic.is_none() {
+                        result.italic = attrs.italic;
+                    }
+                    if result.underline.is_none() {
+                        result.underline = attrs.underline;
+                    }
+                    if result.blink.is_none() {
+                        result.blink = attrs.blink;
+                    }
+                    if result.roman.is_none() {
+                        result.roman = attrs.roman;
+                    }
+                    break;
                 }
             }
         }
 
-        // Fall back to default
-        &self.default_style
+        // Fill remaining None from default style
+        if result.color.is_none() {
+            result.color = self.default_style.color.clone();
+        }
+        if result.bg.is_none() {
+            result.bg = self.default_style.bg.clone();
+        }
+        if result.bold.is_none() {
+            result.bold = self.default_style.bold;
+        }
+        if result.italic.is_none() {
+            result.italic = self.default_style.italic;
+        }
+        if result.underline.is_none() {
+            result.underline = self.default_style.underline;
+        }
+        if result.blink.is_none() {
+            result.blink = self.default_style.blink;
+        }
+        if result.roman.is_none() {
+            result.roman = self.default_style.roman;
+        }
+
+        result
     }
 
     /// Iterate over all token types with their effective styles.
@@ -200,5 +246,52 @@ mod tests {
         assert_eq!(ansi_color("#000000"), Some(0));
         assert_eq!(ansi_color("#ff0000"), Some(9)); // Light Red is closest to pure red
         assert_eq!(ansi_color("#ffffff"), Some(15));
+    }
+
+    #[test]
+    fn test_generated_monokai() {
+        use super::generated::monokai_style;
+        let style = monokai_style();
+        assert_eq!(style.name, "monokai");
+        assert_eq!(style.default_style.bg, Some("#272822".to_string()));
+
+        // Keyword should be cyan
+        let kw = style.style_for_token(Token::KEYWORD);
+        assert_eq!(kw.color, Some("#66d9ef".to_string()));
+
+        // String should be yellow-ish
+        let s = style.style_for_token(Token::STRING);
+        assert_eq!(s.color, Some("#e6db74".to_string()));
+    }
+
+    #[test]
+    fn test_generated_default() {
+        use super::generated::default_style;
+        let style = default_style();
+        assert_eq!(style.name, "default");
+        assert_eq!(style.default_style.bg, Some("#f8f8f8".to_string()));
+
+        // Keyword should be green, bold
+        let kw = style.style_for_token(Token::KEYWORD);
+        assert_eq!(kw.color, Some("#008000".to_string()));
+        assert_eq!(kw.bold, Some(true));
+    }
+
+    #[test]
+    fn test_generated_get_style() {
+        use super::generated::get_style;
+        assert!(get_style("monokai").is_some());
+        assert!(get_style("default").is_some());
+        assert!(get_style("dracula").is_some());
+        assert!(get_style("nonexistent").is_none());
+    }
+
+    #[test]
+    fn test_generated_all_names() {
+        use super::generated::ALL_STYLE_NAMES;
+        assert!(!ALL_STYLE_NAMES.is_empty());
+        assert!(ALL_STYLE_NAMES.contains(&"monokai"));
+        assert!(ALL_STYLE_NAMES.contains(&"dracula"));
+        assert!(ALL_STYLE_NAMES.contains(&"default"));
     }
 }

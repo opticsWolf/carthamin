@@ -12,6 +12,7 @@ pub mod bindings;
 use pyo3::prelude::*;
 use pyo3::create_exception;
 use crate::bindings::classes::PyToken;
+use crate::bindings::style::{PyStyle, PyStyleAttributes};
 use crate::token::Token;
 
 create_exception!(carthamin, ClassNotFound, pyo3::exceptions::PyValueError);
@@ -25,6 +26,14 @@ fn carthamin(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // Token class
     m.add_class::<PyToken>()?;
+
+    // Style classes
+    m.add_class::<PyStyle>()?;
+    m.add_class::<PyStyleAttributes>()?;
+
+    // Style functions
+    m.add_function(wrap_pyfunction!(bindings::style::py_get_style_by_name, m)?)?;
+    m.add_function(wrap_pyfunction!(bindings::style::py_get_all_styles, m)?)?;
 
     // Add known token constants to the module
     macro_rules! add_token {
