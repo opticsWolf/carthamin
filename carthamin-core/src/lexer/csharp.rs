@@ -1,6 +1,7 @@
 use crate::token::Token;
 use crate::lexer::{Lexer, RegexLexer, LexerRule, LexerAction};
 use crate::scanner::TokenPattern;
+use crate::unistring::{XID_START, XID_CONTINUE};
 
 /// C# lexer for .NET C# source code.
 pub struct CSharpLexer {
@@ -67,7 +68,9 @@ impl CSharpLexer {
         root_rules.push(LexerRule { pattern: TokenPattern::new(&type_pattern, Token::KEYWORD).unwrap(), action: LexerAction::token(Token::KEYWORD) });
 
         // Identifiers
-        root_rules.push(LexerRule { pattern: TokenPattern::new(r"[_a-zA-Z][\w]*", Token::NAME).unwrap(), action: LexerAction::token(Token::NAME) });
+        // Identifiers — Unicode-aware via XID_START/XID_CONTINUE
+        let ident_pattern = format!("[{}][{}]*", XID_START, XID_CONTINUE);
+        root_rules.push(LexerRule { pattern: TokenPattern::new(&ident_pattern, Token::NAME).unwrap(), action: LexerAction::token(Token::NAME) });
 
         inner.states.insert("root".to_string(), root_rules);
 

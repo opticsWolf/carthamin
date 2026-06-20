@@ -1,6 +1,7 @@
 use crate::token::Token;
 use crate::lexer::{Lexer, RegexLexer, LexerRule, LexerAction};
 use crate::scanner::TokenPattern;
+use crate::unistring::{XID_START, XID_CONTINUE};
 
 /// PowerShell lexer for PowerShell scripts.
 pub struct PowerShellLexer {
@@ -27,8 +28,9 @@ impl PowerShellLexer {
         root_rules.push(LexerRule { pattern: TokenPattern::new(r#""([^"\\]|\\.)*""#, Token::STRING_DOUBLE).unwrap(), action: LexerAction::token(Token::STRING_DOUBLE) });
         root_rules.push(LexerRule { pattern: TokenPattern::new(r"'([^'\\]|\\.)*'", Token::STRING_SINGLE).unwrap(), action: LexerAction::token(Token::STRING_SINGLE) });
 
-        // Variables
-        root_rules.push(LexerRule { pattern: TokenPattern::new(r"\$[a-zA-Z_][a-zA-Z0-9_]*", Token::NAME).unwrap(), action: LexerAction::token(Token::NAME) });
+        // Variables — Unicode-aware
+        let var_pattern = format!("$[{}][{}]*", XID_START, XID_CONTINUE);
+        root_rules.push(LexerRule { pattern: TokenPattern::new(&var_pattern, Token::NAME).unwrap(), action: LexerAction::token(Token::NAME) });
         root_rules.push(LexerRule { pattern: TokenPattern::new(r"\$[0-9]+", Token::NAME).unwrap(), action: LexerAction::token(Token::NAME) });
 
         // Operators
@@ -71,8 +73,9 @@ impl PowerShellLexer {
         let type_pattern = format!(r"\b({})\b", types.join("|"));
         root_rules.push(LexerRule { pattern: TokenPattern::new(&type_pattern, Token::KEYWORD).unwrap(), action: LexerAction::token(Token::KEYWORD) });
 
-        // Identifiers
-        root_rules.push(LexerRule { pattern: TokenPattern::new(r"[a-zA-Z_][a-zA-Z0-9_]*", Token::NAME).unwrap(), action: LexerAction::token(Token::NAME) });
+        // Identifiers — Unicode-aware via XID_START/XID_CONTINUE
+        let ident_pattern = format!("[{}][{}]*", XID_START, XID_CONTINUE);
+        root_rules.push(LexerRule { pattern: TokenPattern::new(&ident_pattern, Token::NAME).unwrap(), action: LexerAction::token(Token::NAME) });
 
         inner.states.insert("root".to_string(), root_rules);
 

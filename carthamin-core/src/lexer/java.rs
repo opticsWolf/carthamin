@@ -1,6 +1,7 @@
 use crate::token::Token;
 use crate::lexer::{Lexer, RegexLexer, LexerRule, LexerAction};
 use crate::scanner::TokenPattern;
+use crate::unistring::{XID_START, XID_CONTINUE};
 
 /// Java lexer supporting Java 17+ features.
 pub struct JavaLexer {
@@ -59,8 +60,9 @@ impl JavaLexer {
         // Characters
         root_rules.push(LexerRule { pattern: TokenPattern::new(r"'([^'\\]|\\.)*'", Token::STRING).unwrap(), action: LexerAction::token(Token::STRING) });
 
-        // Identifiers
-        root_rules.push(LexerRule { pattern: TokenPattern::new(r"[a-zA-Z_][a-zA-Z0-9_]*", Token::NAME).unwrap(), action: LexerAction::token(Token::NAME) });
+        // Identifiers — Unicode-aware via XID_START/XID_CONTINUE
+        let ident_pattern = format!("[{}][{}]*", XID_START, XID_CONTINUE);
+        root_rules.push(LexerRule { pattern: TokenPattern::new(&ident_pattern, Token::NAME).unwrap(), action: LexerAction::token(Token::NAME) });
 
         inner.states.insert("root".to_string(), root_rules);
 

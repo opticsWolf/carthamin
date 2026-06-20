@@ -1,6 +1,7 @@
 use crate::token::Token;
 use crate::lexer::{Lexer, RegexLexer, LexerRule, LexerAction};
 use crate::scanner::TokenPattern;
+use crate::unistring::{XID_START, XID_CONTINUE};
 
 /// Triple double-quote pattern for Python strings.
 const TRIPLE_DQ: &str = r#""""#;
@@ -108,36 +109,42 @@ impl PythonLexer {
         root_rules.push(LexerRule { pattern: TokenPattern::new(&builtin_pattern, Token::NAME_BUILTIN).unwrap(), action: LexerAction::token(Token::NAME_BUILTIN) });
 
         // Decorator: @name
-        root_rules.push(LexerRule { pattern: TokenPattern::new(r"@[a-zA-Z_][a-zA-Z0-9_]*", Token::NAME_DECORATOR).unwrap(), action: LexerAction::token(Token::NAME_DECORATOR) });
+        let ident_pattern = format!("@[{}][{}]*", XID_START, XID_CONTINUE);
+        root_rules.push(LexerRule { pattern: TokenPattern::new(&ident_pattern, Token::NAME_DECORATOR).unwrap(), action: LexerAction::token(Token::NAME_DECORATOR) });
 
-        // Names (identifiers)
-        root_rules.push(LexerRule { pattern: TokenPattern::new(r"[a-zA-Z_][a-zA-Z0-9_]*", Token::NAME).unwrap(), action: LexerAction::token(Token::NAME) });
+        // Names (identifiers) — Unicode-aware via XID_START/XID_CONTINUE
+        let name_pattern = format!("[{}][{}]*", XID_START, XID_CONTINUE);
+        root_rules.push(LexerRule { pattern: TokenPattern::new(&name_pattern, Token::NAME).unwrap(), action: LexerAction::token(Token::NAME) });
 
         inner.states.insert("root".to_string(), root_rules);
 
         // Function name state (after 'def')
+        let funcname_pattern = format!("[{}][{}]*", XID_START, XID_CONTINUE);
         inner.states.insert("funcname".to_string(), vec![
             LexerRule { pattern: TokenPattern::new(r"[ \t]+", Token::WHITESPACE).unwrap(), action: LexerAction::token(Token::WHITESPACE) },
-            LexerRule { pattern: TokenPattern::new(r"[a-zA-Z_][a-zA-Z0-9_]*", Token::NAME_FUNCTION).unwrap(), action: LexerAction::pop(1) },
+            LexerRule { pattern: TokenPattern::new(&funcname_pattern, Token::NAME_FUNCTION).unwrap(), action: LexerAction::pop(1) },
         ]);
 
         // Class name state (after 'class')
+        let classname_pattern = format!("[{}][{}]*", XID_START, XID_CONTINUE);
         inner.states.insert("classname".to_string(), vec![
             LexerRule { pattern: TokenPattern::new(r"[ \t]+", Token::WHITESPACE).unwrap(), action: LexerAction::token(Token::WHITESPACE) },
-            LexerRule { pattern: TokenPattern::new(r"[a-zA-Z_][a-zA-Z0-9_]*", Token::NAME_CLASS).unwrap(), action: LexerAction::pop(1) },
+            LexerRule { pattern: TokenPattern::new(&classname_pattern, Token::NAME_CLASS).unwrap(), action: LexerAction::pop(1) },
         ]);
 
         // Import state
+        let ns_pattern = format!("[{}][{}.]*", XID_START, XID_CONTINUE);
         inner.states.insert("import".to_string(), vec![
             LexerRule { pattern: TokenPattern::new(r"[ \t]+", Token::WHITESPACE).unwrap(), action: LexerAction::token(Token::WHITESPACE) },
-            LexerRule { pattern: TokenPattern::new(r"[a-zA-Z_][a-zA-Z0-9_.]*", Token::NAME_NAMESPACE).unwrap(), action: LexerAction::token(Token::NAME_NAMESPACE) },
+            LexerRule { pattern: TokenPattern::new(&ns_pattern, Token::NAME_NAMESPACE).unwrap(), action: LexerAction::token(Token::NAME_NAMESPACE) },
             LexerRule { pattern: TokenPattern::new(r"\n", Token::WHITESPACE).unwrap(), action: LexerAction::pop(1) },
         ]);
 
         // From import state
+        let ns_pattern_from = format!("[{}][{}.]*", XID_START, XID_CONTINUE);
         inner.states.insert("fromimport".to_string(), vec![
             LexerRule { pattern: TokenPattern::new(r"[ \t]+", Token::WHITESPACE).unwrap(), action: LexerAction::token(Token::WHITESPACE) },
-            LexerRule { pattern: TokenPattern::new(r"[a-zA-Z_][a-zA-Z0-9_.]*", Token::NAME_NAMESPACE).unwrap(), action: LexerAction::token(Token::NAME_NAMESPACE) },
+            LexerRule { pattern: TokenPattern::new(&ns_pattern_from, Token::NAME_NAMESPACE).unwrap(), action: LexerAction::token(Token::NAME_NAMESPACE) },
             LexerRule { pattern: TokenPattern::new(r"(import)\b", Token::KEYWORD_NAMESPACE).unwrap(), action: LexerAction::push("import") },
             LexerRule { pattern: TokenPattern::new(r"\n", Token::WHITESPACE).unwrap(), action: LexerAction::pop(1) },
         ]);

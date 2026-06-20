@@ -1205,7 +1205,6 @@ pub fn monokai_style() -> Style {
         (Token::PUNCTUATION, "color:#f8f8f2"),
         (Token::NAME, "color:#f8f8f2"),
         (Token::NAME_ATTRIBUTE, "color:#a6e22e"),
-        (Token::NAME_BUILTIN, "color:#a6e22e"),
         (Token::NAME_CLASS, "color:#a6e22e"),
         (Token::NAME_CONSTANT, "color:#66d9ef"),
         (Token::NAME_DECORATOR, "color:#a6e22e"),
@@ -1220,14 +1219,12 @@ pub fn monokai_style() -> Style {
         (Token::STRING_ESCAPE, "color:#ae81ff"),
         (Token::GENERIC_DELETED, "color:#ff4689"),
         (Token::GENERIC_EMPH, "italic:true"),
-        (Token::GENERIC_ERROR, "color:#ff4689"),
         (Token::GENERIC_INSERTED, "color:#a6e22e"),
         (Token::GENERIC_OUTPUT, "color:#66d9ef"),
         (Token::GENERIC_PROMPT, "bold:true;color:#ff4689"),
         (Token::GENERIC_STRONG, "bold:true"),
         (Token::GENERIC_EMPH_STRONG, "bold:true;italic:true"),
         (Token::GENERIC_SUBHEADING, "color:#959077"),
-        (Token::GENERIC_TRACEBACK, "color:#66d9ef"),
     ];
     for (token, css) in entries {
         s.styles.insert(*token, StyleAttributes::from_css_string(css));

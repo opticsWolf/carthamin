@@ -3,6 +3,7 @@ pub mod regexopt;
 pub mod util;
 pub mod style;
 pub mod scanner;
+pub mod unistring;
 pub mod lexer;
 pub mod formatter;
 pub mod filter;

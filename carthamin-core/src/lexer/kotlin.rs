@@ -1,6 +1,7 @@
 use crate::token::Token;
 use crate::lexer::{Lexer, RegexLexer, LexerRule, LexerAction};
 use crate::scanner::TokenPattern;
+use crate::unistring::{XID_START, XID_CONTINUE};
 
 /// Kotlin lexer for Kotlin source code.
 /// Ported from pygments.lexers.jvm.KotlinLexer.
@@ -15,8 +16,8 @@ impl KotlinLexer {
         inner.filenames = vec!["*.kt", "*.kts"];
         inner.mimetypes = vec!["text/x-kotlin"];
 
-        // Kotlin identifier patterns (simplified ASCII version)
-        let kt_name = r"@?[_a-zA-Z][_a-zA-Z0-9]*";
+        // Kotlin identifier patterns — Unicode-aware via XID_START/XID_CONTINUE
+        let kt_name = format!("@?[{}][{}]*", XID_START, XID_CONTINUE);
         let kt_id = format!(r"(?:(?:{})|(?:`[^`]*`))", kt_name);
 
         // Modifiers
@@ -55,15 +56,19 @@ impl KotlinLexer {
         // Imports
         root_rules.push(LexerRule::token(r"(package|import)(\s+)(\S+)", Token::KEYWORD).unwrap());
 
-        // Dot access
-        root_rules.push(LexerRule::token(r"(\?\.)((?:[^\W\d]|\$)[\w\$]*)", Token::OPERATOR).unwrap());
-        root_rules.push(LexerRule::token(r"(\.)((?:[^\W\d]|\$)[\w\$]*)", Token::PUNCTUATION).unwrap());
+        // Dot access — Unicode-aware
+        let dot_access_pattern = format!(r"(\?\.)((?:[{}]|\$)[{}\$]*)", XID_START, XID_CONTINUE);
+        root_rules.push(LexerRule::token(&dot_access_pattern, Token::OPERATOR).unwrap());
+        let dot_pattern = format!(r"(\.)((?:[{}]|\$)[{}\$]*)", XID_START, XID_CONTINUE);
+        root_rules.push(LexerRule::token(&dot_pattern, Token::PUNCTUATION).unwrap());
 
-        // Annotations
-        root_rules.push(LexerRule::token(r"@[^\W\d][\w.]*", Token::NAME_DECORATOR).unwrap());
+        // Annotations — Unicode-aware
+        let annot_pattern = format!("@[{}][{}\\.]*", XID_START, XID_CONTINUE);
+        root_rules.push(LexerRule::token(&annot_pattern, Token::NAME_DECORATOR).unwrap());
 
-        // Labels
-        root_rules.push(LexerRule::token(r"[^\W\d][\w.]+@", Token::NAME_DECORATOR).unwrap());
+        // Labels — Unicode-aware
+        let label_pattern = format!("[{}][{}\\.]+@", XID_START, XID_CONTINUE);
+        root_rules.push(LexerRule::token(&label_pattern, Token::NAME_DECORATOR).unwrap());
 
         // Object expression
         root_rules.push(LexerRule::push(r"(object)(\s+)(:)(\s+)", Token::KEYWORD, "class").unwrap());

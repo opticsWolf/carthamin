@@ -1,6 +1,7 @@
 use crate::token::Token;
 use crate::lexer::{Lexer, RegexLexer, LexerRule, LexerAction};
 use crate::scanner::TokenPattern;
+use crate::unistring::{XID_START, XID_CONTINUE};
 
 /// JavaScript lexer supporting ES6+ features.
 /// Ported from pygments.lexers.javascript.
@@ -128,13 +129,14 @@ impl JavaScriptLexer {
         // Exception names
         root_rules.push(LexerRule { pattern: TokenPattern::new(r"\b((?:Eval|Internal|Range|Reference|Syntax|Type|URI)?Error)\b", Token::NAME_EXCEPTION).unwrap(), action: LexerAction::token(Token::NAME_EXCEPTION) });
 
-        // Private identifiers
-        root_rules.push(LexerRule { pattern: TokenPattern::new(r"#[a-zA-Z_]\w*", Token::NAME).unwrap(), action: LexerAction::token(Token::NAME) });
+        // Private identifiers — Unicode-aware
+        let private_ident = format!("#[{}$][{}$]*", XID_START, XID_CONTINUE);
+        root_rules.push(LexerRule { pattern: TokenPattern::new(&private_ident, Token::NAME).unwrap(), action: LexerAction::token(Token::NAME) });
 
-        // Identifiers
+        // Identifiers — Unicode-aware via XID_START/XID_CONTINUE
         // In Python: (JS_IDENT, Name.Other) where JS_IDENT is a complex Unicode-aware pattern
-        // For simplicity, use ASCII identifiers
-        root_rules.push(LexerRule { pattern: TokenPattern::new(r"[a-zA-Z_$][\w$]*", Token::NAME).unwrap(), action: LexerAction::token(Token::NAME) });
+        let ident_pattern = format!("[{}$][{}$]*", XID_START, XID_CONTINUE);
+        root_rules.push(LexerRule { pattern: TokenPattern::new(&ident_pattern, Token::NAME).unwrap(), action: LexerAction::token(Token::NAME) });
 
         // Strings - must come before identifiers to match correctly
         // In Python: (r'"(\\\\|\\[^\\]|[^"\\])*"', String.Double)
