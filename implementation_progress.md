@@ -1,8 +1,8 @@
 # Carthamin Implementation Progress
 
-**Last Updated**: 2026-06-20
-**Overall Status**: Core lexer engine, 458 lexers (28 manual + 430 auto-generated). Lexer code generator complete.
-**Test Results**: Rust: 171 passed | Python Compat: 5310 passed | Python Style: 23 passed | Unicode Parity: 12 passed | **Total: 5516 passed, 0 failed** (1 pre-existing style mismatch)
+**Last Updated**: 2026-06-21
+**Overall Status**: Core lexer engine, 458 lexers (28 manual + 430 auto-generated), 8 formatters.
+**Test Results**: Rust: 195 passed | Python Compat: 5310 passed | Python Style: 23 passed | Unicode Parity: 12 passed | **Total: 5540 passed, 0 failed**
 
 ---
 
@@ -47,7 +47,7 @@ The refactor plan maps the Pygments Python library to a Rust implementation with
 | 4 | Scanner & Lexer Engine | ✅ Complete | RegexScanner, Lexer trait, RegexLexer state machine |
 | 5 | Filter System | ✅ Complete | Filter trait, 5 built-in filters |
 | 6 | Core Formatters | ✅ Complete | HTML, Terminal, Terminal256 |
-| 7 | Additional Formatters | ⬜ Pending | LaTeX, RTF, Groff, SVG, IRC, BBCode, etc. |
+| 7 | Additional Formatters | ⚠️ Partial | LaTeX, RTF, Groff, SVG, IRC, BBCode, etc. |
 | 8 | Critical Lexers | ✅ Complete | 30 lexers ported and tested |
 | 9 | Lexer Code Generation | ✅ Complete | AST parser, generator for remaining lexers |
 | 10 | Registry & Public API | ✅ Partial | lex(), format(), highlight() exposed |
@@ -183,7 +183,7 @@ The token system is the foundation of the entire lexer architecture. It mirrors 
 - `token_to_class()` for CSS class name generation
 
 **Not Yet Implemented:**
-- `LatexFormatter`, `RtfFormatter`, `GroffFormatter`, `SvgFormatter`, `PangoMarkupFormatter`, `IRCFormatter`, `BBCodeFormatter`, `NullFormatter`, `RawTokenFormatter`, `TestcaseFormatter`
+- `LatexFormatter`, `RtfFormatter`, `GroffFormatter`, `SvgFormatter`, `PangoMarkupFormatter`
 
 **Test Coverage:**
 - `tests/test_html_formatter.py` — HTML output compatibility
@@ -419,16 +419,17 @@ The lexer code generator is a comprehensive Python script that:
 - `GroffFormatter` — groff/roff output
 - `SvgFormatter` — SVG output with styled text
 - `PangoMarkupFormatter` — Pango markup output
-- `IRCFormatter` — IRC color codes
-- `BBCodeFormatter` — BBCode output
 - `NullFormatter` — passthrough (no formatting)
 - `RawTokenFormatter` — raw token list output
 - `TestcaseFormatter` — test case output
+- `IRCFormatter` — IRC color codes (16-color, bold/italic)
+- `BBCodeFormatter` — BBCode output with style-driven tags
 
 **What's Involved:**
 Each formatter implements the `Formatter` trait with a `format()` method that writes to a `Write` destination. The complexity varies:
-- `NullFormatter` / `RawTokenFormatter` — trivial (5-10 lines each)
-- `IRCFormatter` — simple (20-30 lines, ANSI color mapping)
+- `NullFormatter` / `RawTokenFormatter` — trivial (5-10 lines each) ✅ Done
+- `IRCFormatter` — simple (20-30 lines, IRC color mapping) ✅ Done
+- `BBCodeFormatter` — simple (20-30 lines, style-driven BBCode tags) ✅ Done
 - `LatexFormatter` — moderate (50-100 lines, LaTeX command generation)
 - `SvgFormatter` — complex (100-200 lines, XML generation, positioning)
 - `RtfFormatter` — complex (100-200 lines, RTF control word generation)
@@ -600,11 +601,11 @@ The following roadmap prioritizes gaps by impact and dependency:
 ### Current Test Results
 | Category | Tests | Passed | Failed |
 |----------|-------|--------|--------|
-| Rust Unit Tests | 171 | 171 | 0 |
+| Rust Unit Tests | 195 | 195 | 0 |
 | Python Compatibility Tests | 5310 | 5310 | 0 |
 | Python Style Compatibility Tests | 23 | 23 | 0 |
 | Unicode Parity Tests | 12 | 12 | 0 |
-| **Total** | **5516** | **5516** | **0** |
+| **Total** | **5540** | **5540** | **0** |
 
 ### Test Coverage by Component
 | Component | Rust Tests | Python Tests | Coverage |
@@ -614,7 +615,7 @@ The following roadmap prioritizes gaps by impact and dependency:
 | Core Utilities | 2 | 0 | Partial |
 | Scanner/Lexer Engine | 1 | 0 | Partial |
 | Filter System | 3 | 0 | Partial |
-| Formatters | 0 | 2 | Partial |
+| Formatters | 10 | 2 | Partial |
 | Language Lexers | 171 | 0 | Full (458 lexers) |
 | Registry | 2 | 0 | Partial |
 | PyO3 Bindings | 0 | 7 | Partial |
@@ -728,11 +729,6 @@ pygments/
 - `GroffFormatter` — groff/roff output
 - `SvgFormatter` — SVG output
 - `PangoMarkupFormatter` — Pango markup
-- `IRCFormatter` — IRC color codes
-- `BBCodeFormatter` — BBCode output
-- `NullFormatter` — passthrough
-- `RawTokenFormatter` — raw token list
-- `TestcaseFormatter` — test case output
 
 ### Pygments Style Features Not Yet Ported
 - All 49 styles are generated and tested ✅
@@ -791,13 +787,13 @@ Carthamin has successfully implemented the core lexer engine, token system, styl
 ### Completed
 - Core lexer engine, token system, style system, filter system
 - 458 lexers (28 manual + 430 auto-generated via `generators/gen_lexers.py`)
-- 3 core formatters (HTML, Terminal, Terminal256)
-- 171 Rust tests + 5310 Python compatibility tests passing
+- 8 formatters (HTML, Terminal, Terminal256, TerminalTrueColor, Null, RawToken, Testcase, IRC, BBCode)
+- 195 Rust tests + 5310 Python compatibility tests passing
 
 ### Remaining
 1. **Extended Regex Lexer** (HIGH) — template/delegating lexers (78 skipped)
 2. **Registry completeness** (MEDIUM) — `guess_lexer()`, full registry
-3. **Additional formatters** (MEDIUM) — 10 formatters remaining
+3. **Additional formatters** (MEDIUM) — 5 formatters remaining (LaTeX, RTF, Groff, SVG, PangoMarkup)
 4. **PyO3 bindings** (LOW-MEDIUM) — filters, formatters, lexer classes
 5. **Performance benchmarking** (LOW) — validate Rust advantage
 6. **CLI & polish** (LOW) — production readiness

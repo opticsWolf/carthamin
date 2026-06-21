@@ -81,19 +81,19 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 - [ ] PyO3 bindings for formatter classes
 - [x] Verify: HTML output structurally identical (use structural_diff)
 
-## Phase 7: Additional Formatters (Status: PENDING)
+## Phase 7: Additional Formatters (Status: PARTIAL)
 
-**Files**: `src/formatter/latex.rs`, `src/formatter/rtf.rs`, `src/formatter/irc.rs`, etc.
+**Files**: `src/formatter/other.rs`, `src/formatter/irc_bbcode.rs`
 
 - [ ] Port `LatexFormatter`
 - [ ] Port `RtfFormatter`
 - [ ] Port `GroffFormatter`
 - [ ] Port `SvgFormatter`
 - [ ] Port `PangoMarkupFormatter`
-- [ ] Port `IRCFormatter`
-- [ ] Port `BBCodeFormatter`, `RstFormatter`, `GlslFormatter`
-- [ ] Port `NullFormatter`, `RawTokenFormatter`, `TestcaseFormatter`
-- [ ] Verify each formatter's output
+- [x] Port `IRCFormatter` — IRC color codes (16-color, bold/italic)
+- [x] Port `BBCodeFormatter` — style-driven BBCode tags
+- [x] Port `NullFormatter`, `RawTokenFormatter`, `TestcaseFormatter`
+- [x] Verify each formatter's output
 
 ## Phase 8: Critical Lexers (Status: COMPLETE)
 
@@ -246,7 +246,7 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 | 4: Scanner/Lexer | ✅ Complete | 3/3 | 1/1 |
 | 5: Filters | ✅ Complete | 1/2 | 1/1 |
 | 6: Core Formatters | ✅ Complete | 3/4 | 2/2 |
-| 7: Extra Formatters | ⬜ Pending | 0/10 | 0/1 |
+| 7: Extra Formatters | ⚠️ Partial | 4/10 | 10/11 |
 | 8: Critical Lexers | ✅ Complete | 30/30 | 129/129 |
 | 9: Lexer Gen | ✅ Complete | 1/1 | 0/0 |
 | 10: Registry/API | ✅ Complete | 3/3 | 1/1 |
@@ -261,13 +261,13 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 ### Completed
 - Core lexer engine, token system, style system, filter system
 - 458 lexers (28 manual + 430 auto-generated via `generators/gen_lexers.py`)
-- 3 core formatters (HTML, Terminal, Terminal256)
-- 171 Rust tests + 5310 Python compatibility tests passing
+- 8 formatters (HTML, Terminal, Terminal256, TerminalTrueColor, Null, RawToken, Testcase, IRC, BBCode)
+- 195 Rust tests + 5310 Python compatibility tests passing
 
 ### Remaining
 1. **Extended Regex Lexer** (HIGH) — template/delegating lexers (78 skipped)
 2. **Registry completeness** (MEDIUM) — `guess_lexer()`, full registry
-3. **Additional formatters** (MEDIUM) — 10 formatters remaining
+3. **Additional formatters** (MEDIUM) — 5 formatters remaining (LaTeX, RTF, Groff, SVG, PangoMarkup)
 4. **PyO3 bindings** (LOW-MEDIUM) — filters, formatters, lexer classes
 5. **Performance benchmarking** (LOW) — validate Rust advantage
 6. **CLI & polish** (LOW) — production readiness

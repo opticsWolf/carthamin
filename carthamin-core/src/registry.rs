@@ -389,6 +389,36 @@ impl FormatterRegistry {
                 extension: "",
                 mimetype: "text/plain",
             },
+            FormatterEntry {
+                name: "Text only",
+                aliases: &["text", "null"],
+                extension: "txt",
+                mimetype: "text/plain",
+            },
+            FormatterEntry {
+                name: "Raw tokens",
+                aliases: &["raw", "tokens"],
+                extension: "raw",
+                mimetype: "text/x-pygmentsraw",
+            },
+            FormatterEntry {
+                name: "Testcase",
+                aliases: &["testcase"],
+                extension: "py",
+                mimetype: "text/x-python",
+            },
+            FormatterEntry {
+                name: "IRC",
+                aliases: &["irc", "IRC"],
+                extension: "",
+                mimetype: "text/plain",
+            },
+            FormatterEntry {
+                name: "BBCode",
+                aliases: &["bbcode", "bb"],
+                extension: "bb",
+                mimetype: "text/plain",
+            },
         ];
 
         for (idx, entry) in entries.iter().enumerate() {
@@ -455,6 +485,17 @@ mod tests {
         assert!(registry.get_by_alias("html").is_some());
         assert!(registry.get_by_alias("terminal").is_some());
         assert!(registry.get_by_extension("html").is_some());
+        assert!(registry.get_by_alias("text").is_some());
+        assert!(registry.get_by_alias("null").is_some());
+        assert!(registry.get_by_extension("txt").is_some());
+        assert!(registry.get_by_alias("raw").is_some());
+        assert!(registry.get_by_alias("tokens").is_some());
+        assert!(registry.get_by_extension("raw").is_some());
+        assert!(registry.get_by_alias("testcase").is_some());
+        assert!(registry.get_by_alias("irc").is_some());
+        assert!(registry.get_by_alias("bbcode").is_some());
+        assert!(registry.get_by_alias("bb").is_some());
+        assert!(registry.get_by_extension("bb").is_some());
     }
 
     #[test]

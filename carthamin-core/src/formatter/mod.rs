@@ -1,6 +1,8 @@
 pub mod html;
 pub mod terminal;
 pub mod terminal256;
+pub mod other;
+pub mod irc_bbcode;
 
 use crate::token::Token;
 

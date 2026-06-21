@@ -60,6 +60,8 @@ Carthamin mirrors Pygments' modular architecture, ported to idiomatic Rust:
 |                     | ``src/formatter/html.rs``   |                     |
 |                     | ``src/formatter/terminal.rs``|                    |
 |                     | ``src/formatter/terminal256.rs``|                 |
+|                     | ``src/formatter/other.rs``  |                     |
+|                     | ``src/formatter/irc_bbcode.rs``|                  |
 +---------------------+-----------------------------+---------------------+
 | **PyO3 Bindings**   | ``src/bindings/mod.rs``     | ✅ Complete         |
 |                     | ``src/bindings/lex.rs``     |                     |
@@ -69,10 +71,10 @@ Carthamin mirrors Pygments' modular architecture, ported to idiomatic Rust:
 Lexers
 ------
 
-**30 lexers ported**, **129 lexer tests**, **167 total tests** (all passing)::
+**30 lexers ported**, **129 lexer tests**, **195 total tests** (all passing)::
 
     cargo test
-    # test result: ok. 167 passed; 0 failed
+    # test result: ok. 195 passed; 0 failed
 
     pytest ../tests/
     # 5313 passed, 16 skipped
@@ -147,7 +149,9 @@ Project Structure
     │       │   ├── mod.rs       # Formatter trait
     │       │   ├── html.rs      # HtmlFormatter
     │       │   ├── terminal.rs  # TerminalFormatter (ANSI)
-    │       │   └── terminal256.rs
+    │       │   ├── terminal256.rs
+    │       │   ├── other.rs     # Null, RawToken, Testcase
+    │       │   └── irc_bbcode.rs # IRC, BBCode
     │       ├── lexer/           # Lexer engine + 30 ported lexers
     │       │   ├── mod.rs       # Lexer trait, RegexLexer, LexerRule
     │       │   ├── regex_lexer.rs
@@ -221,7 +225,7 @@ See `refactor_plan.md <refactor_plan.md>`_ for the full phased plan.
 +----------+---------------------+-------+----------------------+
 | 6        | Core Formatters     | ✅    | ✅                   |
 +----------+---------------------+-------+----------------------+
-| 7        | Extra Formatters    | ⬜    |                      |
+| 7        | Extra Formatters    | ⚠️ Partial | 4 of 10 done       |
 +----------+---------------------+-------+----------------------+
 | 8        | Critical Lexers     | ✅    | ✅ (129/129)         |
 +----------+---------------------+-------+----------------------+
