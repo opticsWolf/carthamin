@@ -4,7 +4,7 @@ use crate::scanner::TokenPattern;
 use crate::unistring::{XID_START, XID_CONTINUE};
 
 /// Triple double-quote pattern for Python strings.
-const TRIPLE_DQ: &str = r#""""#;
+const TRIPLE_DQ: &str = r#"""""#;
 
 /// Python lexer supporting keywords, strings, comments, numbers, operators, and names.
 /// Token granularity matches Pygments' PythonLexer output.
@@ -453,5 +453,20 @@ print("Script complete!")
 "#;
         let tokens = lexer.get_tokens(input);
         assert_eq!(reconstruct(&tokens), input, "Full script round-trip failed");
+    }
+
+    #[test]
+    fn test_python_triple_quoted_detailed() {
+        let lexer = PythonLexer::new();
+        let code = "\"\"\"docstring\"\"\"";
+        let tokens = lexer.get_tokens(code);
+        // Should be: STRING_DOC for opening """, STRING_DOC for content, STRING_DOC for closing """
+        assert_eq!(tokens.len(), 3, "Expected 3 tokens, got: {:?}", tokens);
+        assert_eq!(tokens[0].0, Token::STRING_DOC);
+        assert_eq!(tokens[0].1, "\"\"\"");
+        assert_eq!(tokens[1].0, Token::STRING_DOC);
+        assert_eq!(tokens[1].1, "docstring");
+        assert_eq!(tokens[2].0, Token::STRING_DOC);
+        assert_eq!(tokens[2].1, "\"\"\"");
     }
 }

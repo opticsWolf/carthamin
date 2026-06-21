@@ -2,7 +2,12 @@
 
 **Last Updated**: 2026-06-21
 **Overall Status**: Core lexer engine, 458 lexers (28 manual + 430 auto-generated), 8 formatters, ExtendedRegexLexer.
-**Test Results**: Rust: 293 passed | Python Compat: 5310 passed | Python Style: 23 passed | Unicode Parity: 12 passed | **Total: 5638 passed, 0 failed**
+**Test Results**: Rust: 294 passed | Python Compat: 5327 passed | Python Style: 23 passed | Unicode Parity: 12 passed | Contrast: 1 passed | **Total: 5622 passed, 0 failed, 16 skipped**
+
+**Recent Fixes** (2026-06-21):
+- **Triple-quote bug** in `lexer/python.rs`: `TRIPLE_DQ` was `r#"""#` (2 quotes) instead of `r#"""""#` (3 quotes), causing docstrings to split incorrectly and consume all subsequent code as string content
+- **Stale style generation**: `style/generated.rs` was out of sync with `gen_styles.py`; regenerated to include missing entries (e.g. `Token::NAME_BUILTIN` in monokai)
+- **Contrast tests**: Added `wcag_contrast_ratio` dependency; `tests/contrast/test_contrasts.py` now passes
 
 ---
 
@@ -51,7 +56,7 @@ The refactor plan maps the Pygments Python library to a Rust implementation with
 | 8 | Critical Lexers | ✅ Complete | 30 lexers ported and tested |
 | 9 | Lexer Code Generation | ✅ Complete | AST parser, generator for remaining lexers |
 | 10 | Registry & Public API | ✅ Partial | lex(), format(), highlight() exposed |
-| 11 | Compatibility Tests | ✅ Complete | 5310 Python tests, 293 Rust tests |
+| 11 | Compatibility Tests | ✅ Complete | 5327 Python tests, 294 Rust tests |
 | 12 | Remaining Lexers | ✅ Complete | 430 lexers auto-generated (458 total, 28 manual + 430 generated) |
 | 13 | Final Polish | ⬜ Pending | CLI, plugin system, docs, CI/CD |
 
@@ -98,8 +103,9 @@ The token system is the foundation of the entire lexer architecture. It mirrors 
 
 **Generator**: `generators/gen_styles.py`
 - Reads Pygments source files (49 styles)
-- Generates `generated.rs` with 1,543 explicit style entries
+- Generates `generated.rs` with 1,540 explicit style entries
 - Regenerates on each run to stay in sync with installed Pygments version
+- **Bug fix**: Regenerated to include missing entries (e.g. `Token::NAME_BUILTIN` in monokai style)
 
 **Test Coverage:**
 - `tests/test_style_compatibility.py` — 23 tests, all passing
@@ -331,7 +337,7 @@ The lexer code generator is a comprehensive Python script that:
 - **Skipped**: 78 template lexers (need ExtendedRegexLexer), 61 custom Lexer subclasses
 - **Rust files**: 462 (some share files like cpp.rs, python.rs)
 - **All compile**: ✅ Yes
-- **Tests passing**: 293 Rust + 5310 Python
+- **Tests passing**: 294 Rust + 5327 Python
 
 #### Skipped Categories
 - **Template lexers** (78): Require `ExtendedRegexLexer` with `using()`, `bygroups()`, `include()` support
@@ -378,8 +384,8 @@ The lexer code generator is a comprehensive Python script that:
 **Current State:**
 - 458 lexers total: 28 manually ported + 430 auto-generated
 - `generators/gen_lexers.py` — fully functional AST parser and code generator
-- 293 Rust tests passing (283 lexer tests + 10 other)
-- 5310 Python compatibility tests passing
+- 294 Rust tests passing (284 lexer tests + 10 other)
+- 5327 Python compatibility tests passing
 
 **Missing (now handled by generator):**
 - Lexer code generator (`generators/gen_lexers.py`) — ✅ Implemented
@@ -604,13 +610,22 @@ The following roadmap prioritizes gaps by impact and dependency:
 ## Verification & Test Coverage
 
 ### Current Test Results
-| Category | Tests | Passed | Failed |
-|----------|-------|--------|--------|
-| Rust Unit Tests | 293 | 293 | 0 |
-| Python Compatibility Tests | 5310 | 5310 | 0 |
-| Python Style Compatibility Tests | 23 | 23 | 0 |
-| Unicode Parity Tests | 12 | 12 | 0 |
-| **Total** | **5638** | **5638** | **0** |
+| Category | Tests | Passed | Failed | Skipped |
+|----------|-------|--------|--------|---------|
+| Rust Unit Tests | 294 | 294 | 0 | 0 |
+| Python Compatibility Tests | 5327 | 5327 | 0 | 16 |
+| Python Style Compatibility Tests | 23 | 23 | 0 | 0 |
+| Unicode Parity Tests | 12 | 12 | 0 | 0 |
+| Contrast Tests | 1 | 1 | 0 | 0 |
+| **Total** | **5657** | **5657** | **0** | **16** |
+
+### Skipped Tests (16)
+| Count | Test | Reason |
+|-------|------|--------|
+| 8 | Image formatters (`Bmp`, `Gif`, `Image`, `Jpg`) | `Pillow` not installed |
+| 3 | `guess_lexer` (fsharp, matlab, hybris) | `guess_lexer()` not yet implemented |
+| 4 | Filename matching (srcinfo files) | Missing `srcinfo/` data files |
+| 1 | LaTeX formatter | LaTeX not installed on Windows |
 
 ### Test Coverage by Component
 | Component | Rust Tests | Python Tests | Coverage |
@@ -633,6 +648,7 @@ The following roadmap prioritizes gaps by impact and dependency:
 3. **Additional Formatters**: No tests until formatters are ported.
 4. **Performance**: No benchmarks yet.
 5. **Edge Cases**: Limited testing for binary data, encoding errors, very large files.
+6. **Contrast Tests**: ✅ Passing (requires `wcag_contrast_ratio` package).
 
 ---
 
@@ -690,6 +706,7 @@ The following roadmap prioritizes gaps by impact and dependency:
 | `tests/test_token.py` | Token API tests | ✅ Complete |
 | `tests/test_html_formatter.py` | HTML formatter tests | ✅ Complete |
 | `tests/test_terminal_formatter.py` | Terminal formatter tests | ✅ Complete |
+| `tests/contrast/test_contrasts.py` | WCAG AA color contrast compliance | ✅ Complete |
 | `tests/test_regexlexer.py` | Regex lexer tests | ⬜ Pending |
 | `tests/test_guess.py` | Lexer guessing tests | ⬜ Pending |
 
@@ -794,7 +811,7 @@ Carthamin has successfully implemented the core lexer engine, token system, styl
 - Core lexer engine, token system, style system, filter system
 - 458 lexers (28 manual + 430 auto-generated via `generators/gen_lexers.py`)
 - 8 formatters (HTML, Terminal, Terminal256, TerminalTrueColor, Null, RawToken, Testcase, IRC, BBCode)
-- 293 Rust tests + 5310 Python compatibility tests passing
+- 294 Rust tests + 5327 Python compatibility tests passing
 
 ### Remaining
 1. **Extended Regex Lexer** (HIGH) — ✅ Core features implemented. Integration with template lexers needed.

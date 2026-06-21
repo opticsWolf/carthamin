@@ -28,6 +28,8 @@ AST-derived structural overview of the Pygments codebase, mapped for Rust migrat
   - `using(OtherLexer)` — delegate a rule to another lexer
   - `words((keywords), tokentype)` — generate optimized keyword regex via `regex_opt`
 - **Rust equivalent**: `Lexer` trait, `RegexLexer` struct, `ExtendedRegexLexer` struct with full feature support ✅
+- **Bug fix**: `LexerAction::Noop` now emits `rule.pattern.token` (was silently consuming text)
+- **Bug fix**: `PythonLexer` triple-quote constant corrected (`TRIPLE_DQ` = 3 quotes, not 2)
 - **Complexity**: **High** (core engine logic)
 - **Rust files**: `src/lexer/mod.rs` (Lexer, RegexLexer), `src/lexer/extended.rs` (ExtendedRegexLexer, DelegatingLexer, bygroups, using, include, inherit, combined)
 

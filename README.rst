@@ -72,13 +72,16 @@ Carthamin mirrors Pygments' modular architecture, ported to idiomatic Rust:
 Lexers
 ------
 
-**30 lexers ported**, **283 lexer tests**, **293 total tests** (all passing)::
+**30 lexers ported**, **284 lexer tests**, **294 total tests** (all passing)::
 
     cargo test
-    # test result: ok. 293 passed; 0 failed
+    # test result: ok. 294 passed; 0 failed
 
     pytest ../tests/
-    # 5313 passed, 16 skipped
+    # 5327 passed, 16 skipped
+
+    pytest ../tests/contrast/
+    # 1 passed
 
 ### Core Languages (12)
 
@@ -124,6 +127,9 @@ reprs to Rust ``Token::CONSTANT`` names, and emits compact CSS strings parsed by
 
 Output: ``carthamin-core/src/style/generated.rs`` (~98 KB, 49 builder functions +
 ``get_style(name)`` registry + ``ALL_STYLE_NAMES`` constant).
+
+WCAG AA color contrast compliance verified via ``tests/contrast/test_contrasts.py``
+(requires ``wcag_contrast_ratio`` package).
 
 Key styles: default, monokai, dracula, nord, solarized-dark/light, gruvbox,
 one-dark, material, github-dark, zenburn, and 39 more.
@@ -236,7 +242,7 @@ See `refactor_plan.md <refactor_plan.md>`_ for the full phased plan.
 | 10       | Registry & Public   | ✅    | ✅                   |
 |          | API                 |       |                      |
 +----------+---------------------+-------+----------------------+
-| 11       | Compatibility Tests | ✅    | ✅ (5310 passed)     |
+| 11       | Compatibility Tests | ✅    | ✅ (5327 passed)     |
 +----------+---------------------+-------+----------------------+
 | 12       | Remaining Lexers    | ✅    | ✅ (458 total)       |
 +----------+---------------------+-------+----------------------+

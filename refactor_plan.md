@@ -146,7 +146,8 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 - [x] `ScalaLexer` — triple-quoted strings, pattern matching, string interpolation, implicits (27 tests)
 
 - [x] Verify each lexer against existing test cases (129 Rust lexer tests, 4 style tests, 34 other tests)
-- [x] All tests passing: `cargo test` (293 passed), `pytest` (5310 passed, 16 skipped)
+- [x] All tests passing: `cargo test` (294 passed), `pytest` (5327 passed, 16 skipped)
+- [x] Fix: Triple-quote bug in `PythonLexer` — `TRIPLE_DQ` was `r#"""#` (2 quotes) instead of `r#"""""#` (3 quotes)
 
 ## Phase 9: Lexer Code Generation (Status: COMPLETE)
 
@@ -183,8 +184,8 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 - **Lexers generated**: 430
 - **Total lexers**: 458 (28 manual + 430 auto-generated)
 - **Rust files**: 462 (some share files like cpp.rs, python.rs)
-- **Rust tests**: 293 passed, 0 failed
-- **Python tests**: 5310 passed, 16 skipped
+- **Rust tests**: 294 passed, 0 failed
+- **Python tests**: 5327 passed, 16 skipped
 - **Skipped**: 78 template lexers (need ExtendedRegexLexer), 61 custom Lexer subclasses
 
 ## Phase 10: Registry & Public API (Status: COMPLETE)
@@ -210,8 +211,9 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 - [x] Test edge cases: empty input, binary data, unicode, encoding errors
 - [x] Test API compatibility: `Lexer` attributes, `Formatter` options
 - [x] Python lexer granular tokens: `NAME_FUNCTION`, `NAME_CLASS`, `NAME_BUILTIN`, `NAME_DECORATOR`, `STRING_DOC/DOUBLE/SINGLE/INTERPOL`
-- [x] All 5310 Python tests passing (16 skipped: image formatters, lexer guessing ambiguities, LaTeX)
-- [x] All 293 Rust tests passing
+- [x] All 5327 Python tests passing (16 skipped: image formatters, lexer guessing ambiguities, LaTeX)
+- [x] All 294 Rust tests passing
+- [x] All 1 contrast test passing (requires `wcag_contrast_ratio`)
 - [ ] Benchmark: Rust vs Python performance for large files
 
 ## Phase 12: Remaining Lexers (Status: COMPLETE)
@@ -263,7 +265,7 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 - Core lexer engine, token system, style system, filter system
 - 458 lexers (28 manual + 430 auto-generated via `generators/gen_lexers.py`)
 - 8 formatters (HTML, Terminal, Terminal256, TerminalTrueColor, Null, RawToken, Testcase, IRC, BBCode)
-- 293 Rust tests + 5310 Python compatibility tests passing
+- 294 Rust tests + 5327 Python compatibility tests + 1 contrast test passing
 
 ### Remaining
 1. **Extended Regex Lexer** (HIGH) — ✅ Core features implemented (`ExtendedRegexLexer`, `DelegatingLexer`, `bygroups()`, `using()`, `include()`, `inherit`, `combined()`). Integration with template lexers needed.
