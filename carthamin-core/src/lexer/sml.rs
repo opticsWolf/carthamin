@@ -43,7 +43,7 @@ impl SMLLexer {
 
         // State: core
         inner.states.insert("core".to_string(), vec![
-            LexerRule { pattern: TokenPattern::new(r"(,|\{|;|\}|\[|\]|\)|\(|\.\.\.|_)", Token::PUNCTUATION).unwrap(), action: LexerAction::token(Token::PUNCTUATION) },
+            LexerRule { pattern: TokenPattern::new(r"(\{|\.\.\.|\[|\}|\]|_|\(|,|\)|;)", Token::PUNCTUATION).unwrap(), action: LexerAction::token(Token::PUNCTUATION) },
             LexerRule { pattern: TokenPattern::new(r##"#""##, Token::STRING_CHAR).unwrap(), action: LexerAction::Push("char".to_string()) },
             LexerRule { pattern: TokenPattern::new(r##"""##, Token::STRING_DOUBLE).unwrap(), action: LexerAction::Push("string".to_string()) },
             LexerRule { pattern: TokenPattern::new(r"~?0x[0-9a-fA-F]+", Token::NUMBER_HEX).unwrap(), action: LexerAction::token(Token::NUMBER_HEX) },
@@ -111,7 +111,7 @@ impl SMLLexer {
 
         // State: breakout
         inner.states.insert("breakout".to_string(), vec![
-            LexerRule { pattern: TokenPattern::new(r"(?=\b(include|if|do|infixr|let|struct|functor|infix|andalso|then|val|case|end|op|sig|of|nonfix|and|else|withtype|sharing|while|eqtype|raise|type|fun|structure|signature|open|as|where|local|rec|abstype|handle|orelse|with|fn|in|datatype|exception)\b(?!\'))", Token::TEXT).unwrap(), action: LexerAction::PopN(1) },
+            LexerRule { pattern: TokenPattern::new(r"(?=\b(fun|nonfix|open|as|if|where|functor|andalso|case|local|abstype|end|op|in|exception|signature|infixr|val|orelse|struct|type|infix|raise|do|withtype|sig|with|sharing|while|and|else|handle|fn|then|structure|eqtype|datatype|let|include|rec|of)\b(?!\'))", Token::TEXT).unwrap(), action: LexerAction::PopN(1) },
         ]);
 
         // State: sname

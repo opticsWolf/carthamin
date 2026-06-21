@@ -116,7 +116,7 @@ impl ElixirLexer {
 
         // State: string_double
         inner.states.insert("string_double".to_string(), vec![
-            LexerRule { pattern: TokenPattern::new(r##"[^#"\\]+"##, Token::STRING_DOUBLE).unwrap(), action: LexerAction::token(Token::STRING_DOUBLE) },
+            LexerRule { pattern: TokenPattern::new(r#"[^#"\\]+"#, Token::STRING_DOUBLE).unwrap(), action: LexerAction::token(Token::STRING_DOUBLE) },
             LexerRule { pattern: TokenPattern::new(r"\\.", Token::STRING_DOUBLE).unwrap(), action: LexerAction::token(Token::STRING_DOUBLE) },
         ]);
 
@@ -128,7 +128,7 @@ impl ElixirLexer {
 
         // State: string_double_atom
         inner.states.insert("string_double_atom".to_string(), vec![
-            LexerRule { pattern: TokenPattern::new(r##"[^#"\\]+"##, Token::STRING_SYMBOL).unwrap(), action: LexerAction::token(Token::STRING_SYMBOL) },
+            LexerRule { pattern: TokenPattern::new(r#"[^#"\\]+"#, Token::STRING_SYMBOL).unwrap(), action: LexerAction::token(Token::STRING_SYMBOL) },
             LexerRule { pattern: TokenPattern::new(r"\\.", Token::STRING_SYMBOL).unwrap(), action: LexerAction::token(Token::STRING_SYMBOL) },
         ]);
 
@@ -270,7 +270,7 @@ impl ElixirLexer {
 
         // State: quot-intp
         inner.states.insert("quot-intp".to_string(), vec![
-            LexerRule { pattern: TokenPattern::new(r##"[^#"\\]+"##, Token::STRING_OTHER).unwrap(), action: LexerAction::token(Token::STRING_OTHER) },
+            LexerRule { pattern: TokenPattern::new(r#"[^#"\\]+"#, Token::STRING_OTHER).unwrap(), action: LexerAction::token(Token::STRING_OTHER) },
             LexerRule { pattern: TokenPattern::new(r"\\.", Token::STRING_OTHER).unwrap(), action: LexerAction::token(Token::STRING_OTHER) },
             LexerRule { pattern: TokenPattern::new(r#""[a-zA-Z]*"#, Token::STRING_OTHER).unwrap(), action: LexerAction::PopN(1) },
         ]);

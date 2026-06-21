@@ -36,7 +36,7 @@ impl CMakeLexer {
             LexerRule { pattern: TokenPattern::new(r"\)", Token::PUNCTUATION).unwrap(), action: LexerAction::PopN(1) },
             LexerRule { pattern: TokenPattern::new(r##"".*?""##, Token::STRING_DOUBLE).unwrap(), action: LexerAction::token(Token::STRING_DOUBLE) },
             LexerRule { pattern: TokenPattern::new(r"\\\S+", Token::STRING).unwrap(), action: LexerAction::token(Token::STRING) },
-            LexerRule { pattern: TokenPattern::new(r#"[^)$"# \t\n]+"#, Token::STRING).unwrap(), action: LexerAction::token(Token::STRING) },
+            LexerRule { pattern: TokenPattern::new(r##"[^)$"# \t\n]+"##, Token::STRING).unwrap(), action: LexerAction::token(Token::STRING) },
         ]);
 
         // State: keywords

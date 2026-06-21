@@ -5,6 +5,9 @@ edition = "2021"
 description = "A Rust reimplementation of Pygments with Python bindings"
 license = "BSD-2-Clause"
 
+[lints.rust]
+text_direction_codepoint_in_literal = "allow"
+
 [lib]
 name = "carthamin"
 crate-type = ["cdylib", "rlib"]

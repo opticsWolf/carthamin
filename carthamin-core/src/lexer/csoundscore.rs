@@ -121,7 +121,7 @@ impl CsoundScoreLexer {
 
         // State: macro parameter value list
         inner.states.insert("macro parameter value list".to_string(), vec![
-            LexerRule { pattern: TokenPattern::new(r##"(?:[^\'#"{()]|\{(?!\{))+"##, Token::COMMENT_PREPROC).unwrap(), action: LexerAction::token(Token::COMMENT_PREPROC) },
+            LexerRule { pattern: TokenPattern::new(r#"(?:[^\'#"{()]|\{(?!\{))+"#, Token::COMMENT_PREPROC).unwrap(), action: LexerAction::token(Token::COMMENT_PREPROC) },
             LexerRule { pattern: TokenPattern::new(r"['#]", Token::PUNCTUATION).unwrap(), action: LexerAction::token(Token::PUNCTUATION) },
             LexerRule { pattern: TokenPattern::new(r##"""##, Token::STRING).unwrap(), action: LexerAction::Push("macro parameter value quoted string".to_string()) },
             LexerRule { pattern: TokenPattern::new(r"\{\{", Token::STRING).unwrap(), action: LexerAction::Push("macro parameter value braced string".to_string()) },

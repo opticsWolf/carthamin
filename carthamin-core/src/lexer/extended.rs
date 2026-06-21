@@ -719,6 +719,7 @@ pub fn from_lexer_rule(rule: &LexerRule) -> ExtendedRule {
                 lexer_name: name.clone(),
                 initial_states: None,
             },
+            LexerAction::Default(_) => ExtendedAction::Noop,
         },
         new_state: match &rule.action {
             LexerAction::Push(s) => Some(ExtendedState::Push(s.clone())),

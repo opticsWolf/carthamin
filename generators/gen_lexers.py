@@ -201,35 +201,34 @@ def rust_raw_string(pattern: str) -> str:
     Return a Rust raw string literal for a regex pattern.
 
     Rust raw strings use r"...", r#"..."#, r##"..."## etc.
-    The closing delimiter is the first occurrence of '"<n>#' where <n>
-    matches the number of #s after r. So r#" ends at '"# and r##" ends at '"##.
+    The closing delimiter is '"' followed by n '#' chars. So r#" ends at '"#'
+    and r##" ends at '"##'.
 
-    Key insight: a trailing " in the pattern followed by the delimiter #
-    creates '"#' which prematurely closes the string. Use r##...## when
-    the pattern ends with " or contains "#.
+    Key insight: a '"' in the pattern followed by '#' creates '"#' which
+    prematurely closes r#"..."#. Use r##"..."## when the pattern contains '"#'.
 
     Returns the pattern string with Rust raw string delimiters.
     """
     # Check if pattern ends with " - this creates '"#' with r# delimiter
     ends_with_dq = pattern.endswith('"')
 
-    # Count consecutive #" sequences in the pattern
-    max_hash_dq = 0
-    current_hash_dq = 0
+    # Count consecutive '"# sequences in the pattern (closing delimiter pattern)
+    max_dq_hash = 0
+    current_dq_hash = 0
     for i, ch in enumerate(pattern):
-        if ch == '#':
-            if i + 1 < len(pattern) and pattern[i + 1] == '"':
-                current_hash_dq += 1
-                max_hash_dq = max(max_hash_dq, current_hash_dq)
+        if ch == '"':
+            if i + 1 < len(pattern) and pattern[i + 1] == '#':
+                current_dq_hash += 1
+                max_dq_hash = max(max_dq_hash, current_dq_hash)
             else:
-                current_hash_dq = 0
+                current_dq_hash = 0
         else:
-            current_hash_dq = 0
+            current_dq_hash = 0
 
     # Choose delimiter depth
-    if ends_with_dq or max_hash_dq >= 1:
-        # Pattern ends with " or has #" inside - need r##"..."##
-        depth = max(2, max_hash_dq + 1)
+    if ends_with_dq or max_dq_hash >= 1:
+        # Pattern ends with " or has "# inside - need r##"..."##
+        depth = max(2, max_dq_hash + 1)
         hashes = '#' * depth
         return f'r{hashes}"{pattern}"{hashes}'
     elif '"' in pattern:
@@ -343,9 +342,11 @@ def process_rule(rule, cls) -> Optional[tuple]:
     if type(token_part).__name__ == '_inherit' or str(token_part) == 'inherit':
         return None
 
-    # Handle 'default' directive — skip
+    # Handle 'default' directive — emit as Default action
     if hasattr(token_part, 'state'):
-        return None
+        # default('state') or default('#pop') — emit as a special marker
+        default_target = token_part.state
+        return (r'$', 'DEFAULT', default_target)
 
     # Handle 'combined' — skip (not supported in generated code)
     if type(token_part).__name__ == 'combined':
@@ -487,6 +488,14 @@ def generate_lexer_rust(name: str, info: dict, tokendefs: dict) -> str:
             if not regex_str or not rust_token:
                 continue
 
+            # Handle DEFAULT directive (from default('state') in Pygments)
+            if rust_token == 'DEFAULT':
+                if state_name == 'root':
+                    lines.append(f'        inner.default_states.insert("root".to_string(), "{new_state}".to_string());')
+                else:
+                    lines.append(f'        inner.default_states.insert("{state_name}".to_string(), "{new_state}".to_string());')
+                continue
+
             # Convert regex
             rust_regex = convert_regex(regex_str)
 
@@ -621,6 +630,165 @@ def update_mod_rs(class_name: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# DelegatingLexer generation
+# ---------------------------------------------------------------------------
+
+def generate_delegating_lexer(cls, info: dict, output_dir: Path) -> str:
+    """
+    Generate a DelegatingLexer wrapper in Rust.
+    
+    Parses the __init__ method to find root_lexer and language_lexer,
+    then generates a thin wrapper struct.
+    """
+    from pygments.token import Token as PyToken
+    
+    class_name = cls.__name__
+    
+    # Parse __init__ to find super().__init__(RootLexer, LangLexer, ...)
+    root_lexer_name = None
+    lang_lexer_name = None
+    needle = "Token::OTHER"
+    
+    try:
+        source = inspect.getsource(cls.__init__)
+        # Look for super().__init__(RootLexer, LangLexer, ...)
+        match = re.search(r'super\(\).__init__\((\w+),\s*(\w+)', source)
+        if match:
+            root_lexer_name = match.group(1)
+            lang_lexer_name = match.group(2)
+        
+        # Check for needle parameter
+        needle_match = re.search(r'needle\s*=\s*(\w+\.\w+(?:\.\w+)*)', source)
+        if needle_match:
+            needle_str = needle_match.group(1)
+            needle = python_token_to_rust(type(needle_str)) or "OTHER"
+    except Exception:
+        pass
+    
+    if not root_lexer_name or not lang_lexer_name:
+        return f'parse_error: could not extract root/language lexers from {class_name}'
+    
+    # Map Python lexer class names to Rust module paths
+    rust_module_map = {
+        'HtmlLexer': 'crate::lexer::htmlxml::HtmlLexer',
+        'XmlLexer': 'crate::lexer::htmlxml::XmlLexer',
+        'CssLexer': 'crate::lexer::css::CssLexer',
+        'JavascriptLexer': 'crate::lexer::javascript::JavaScriptLexer',
+        'CLexer': 'crate::lexer::cpp::CLexer',
+        'CppLexer': 'crate::lexer::cpp::CppLexer',
+        'PythonLexer': 'crate::lexer::python::PythonLexer',
+        'Python3Lexer': 'crate::lexer::python::Python3Lexer',
+        'SqlLexer': 'crate::lexer::sql::SqlLexer',
+        'YamlLexer': 'crate::lexer::yaml::YamlLexer',
+        'DjangoLexer': 'crate::lexer::django::DjangoLexer',
+        'PhpLexer': 'crate::lexer::php::PhpLexer',
+        'RstLexer': 'crate::lexer::markup::RstLexer',
+        'DLexer': 'crate::lexer::d::DLexer',
+        'RubyLexer': 'crate::lexer::ruby::RubyLexer',
+        'VbNetLexer': 'crate::lexer::vbnet::VbNetLexer',
+        'CSharpLexer': 'crate::lexer::csharp::CSharpLexer',
+        'ColdfusionLexer': 'crate::lexer::coldfusion::ColdfusionLexer',
+        'MIMELexer': 'crate::lexer::mime::MIMELexer',
+    }
+    
+    def get_rust_module(py_name: str) -> str:
+        if py_name in rust_module_map:
+            return rust_module_map[py_name]
+        # Try generic mapping: ClassName -> crate::lexer::lowercase::ClassName
+        module_name = py_name.replace('Lexer', '').lower()
+        return f'crate::lexer::{module_name}::{py_name}'
+    
+    root_rust = get_rust_module(root_lexer_name)
+    lang_rust = get_rust_module(lang_lexer_name)
+    
+    # Extract Rust struct names from full paths
+    root_struct = root_rust.split('::')[-1]
+    lang_struct = lang_rust.split('::')[-1]
+    
+    # Check if root/language lexer modules exist
+    root_mod_name = root_rust.split('::')[-2]  # module name
+    lang_mod_name = lang_rust.split('::')[-2]  # module name
+    root_file = output_dir / (root_mod_name + '.rs')
+    lang_file = output_dir / (lang_mod_name + '.rs')
+    
+    if not root_file.exists():
+        return f'skipped: root lexer module {root_mod_name} not found'
+    if not lang_file.exists():
+        return f'skipped: language lexer module {lang_mod_name} not found'
+    
+    file_name = class_name.replace('Lexer', '').lower()
+    
+    lines = []
+    lines.append(f"// AUTO-GENERATED by generators/gen_lexers.py — DO NOT EDIT BY HAND")
+    lines.append(f"// DelegatingLexer: {class_name}")
+    lines.append(f"// Root: {root_lexer_name}, Language: {lang_lexer_name}")
+    lines.append("")
+    lines.append("use crate::lexer::{Lexer, DelegatingLexer};")
+    lines.append(f"use {root_rust};")
+    lines.append(f"use {lang_rust};")
+    lines.append("")
+    lines.append(f"/// Auto-generated {class_name} lexer (DelegatingLexer).")
+    lines.append(f"pub struct {class_name} {{")
+    lines.append("    inner: DelegatingLexer,")
+    lines.append("}")
+    lines.append("")
+    lines.append(f"impl {class_name} {{")
+    lines.append("    pub fn new() -> Self {")
+    lines.append(f'        Self {{')
+    lines.append(f'            inner: DelegatingLexer::new(')
+    lines.append(f'                "{info["name"]}",')
+    lines.append(f'                Box::new({root_struct}::new()),')
+    lines.append(f'                Box::new({lang_struct}::new()),')
+    lines.append(f'            ),')
+    lines.append(f'        }}')
+    lines.append("    }")
+    lines.append("}")
+    lines.append("")
+    
+    # Lexer trait impl
+    lines.append("impl Lexer for " + class_name + " {")
+    lines.append("    fn get_tokens(&self, code: &str) -> Vec<(crate::token::Token, String)> {")
+    lines.append("        self.inner.get_tokens(code)")
+    lines.append("    }")
+    lines.append("")
+    lines.append("    fn name(&self) -> &str {")
+    lines.append("        &self.inner.name")
+    lines.append("    }")
+    lines.append("")
+    lines.append("    fn aliases(&self) -> &[&str] {")
+    lines.append("        &[]")
+    lines.append("    }")
+    lines.append("")
+    lines.append("    fn filenames(&self) -> &[&str] {")
+    lines.append("        &[]")
+    lines.append("    }")
+    lines.append("")
+    lines.append("    fn mimetypes(&self) -> &[&str] {")
+    lines.append("        &[]")
+    lines.append("    }")
+    lines.append("}")
+    lines.append("")
+    
+    rust_code = '\n'.join(lines)
+    output_file = output_dir / f"{file_name}.rs"
+    # Strip surrogate pairs and RTL control characters that break Rust compilation
+    rust_code = ''.join(
+        ch for ch in rust_code
+        if not (
+            0xD800 <= ord(ch) <= 0xDFFF or  # surrogates
+            ord(ch) == 0x200E or ord(ch) == 0x200F or  # LTR/RTL marks
+            0x202A <= ord(ch) <= 0x202E or  # RTL embedding/override
+            0x2066 <= ord(ch) <= 0x2069 or  # isolate marks
+            ord(ch) == 0x061C or  # Arabic letter mark
+            ord(ch) == 0x1EFC
+        )
+    )
+    output_file.write_text(rust_code, encoding='utf-8')
+    
+    return f'generated_delegating:{output_file}'
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -633,26 +801,13 @@ def generate_all(output_dir: Optional[Path] = None) -> dict:
         output_dir = LEXER_OUT_DIR
 
     from pygments.lexers._mapping import LEXERS
+    from pygments.lexer import DelegatingLexer as PyDelegatingLexer
 
     results = {}
-
-    # Filter out template/Delegating lexers (require ExtendedRegexLexer)
-    skip_prefixes = ('Template', 'Delegating', 'Angular', 'Cheetah',
-                     'Coldfusion', 'Cython', 'Genshi', 'GenshiPython',
-                     'GenshiPytb', 'GenshiPytbout', 'GenshiPytraceback',
-                     'GenshiTb', 'GenshiTbout', 'GenshiTraceback',
-                     'Mako', 'Myghty', 'NewstyleCheetah', 'Pylons',
-                     'Web2Cheetah', 'WebCheetah')
 
     # Process each lexer
     for lexer_name in sorted(LEXERS.keys()):
         module_path, class_name = LEXERS[lexer_name][0], lexer_name
-
-        # Skip template/delegating lexers
-        if any(module_path.startswith(f'pygments.lexers.{p}') for p in
-               ['templates', 'markup']):
-            results[lexer_name] = 'skipped_template'
-            continue
 
         # Skip if already manually ported (check for existing file)
         name_map = {
@@ -680,6 +835,16 @@ def generate_all(output_dir: Optional[Path] = None) -> dict:
             results[lexer_name] = f'import_error: {e}'
             continue
 
+        # Check if it's a DelegatingLexer
+        try:
+            if issubclass(cls, PyDelegatingLexer):
+                info = extract_lexer_info(cls)
+                result = generate_delegating_lexer(cls, info=info, output_dir=output_dir)
+                results[lexer_name] = result
+                continue
+        except TypeError:
+            pass
+
         # Extract info
         try:
             info = extract_lexer_info(cls)
@@ -697,8 +862,17 @@ def generate_all(output_dir: Optional[Path] = None) -> dict:
         try:
             rust_code = generate_lexer_rust(class_name, info, tokendefs)
             output_file = output_dir / f"{file_name}.rs"
-            # Handle surrogate characters by replacing them
-            rust_code = ''.join(ch for ch in rust_code if not (0xD800 <= ord(ch) <= 0xDFFF))
+            # Strip surrogate pairs and RTL control characters
+            rust_code = ''.join(
+                ch for ch in rust_code
+                if not (
+                    0xD800 <= ord(ch) <= 0xDFFF or
+                    ord(ch) == 0x200E or ord(ch) == 0x200F or
+                    0x202A <= ord(ch) <= 0x202E or
+                    0x2066 <= ord(ch) <= 0x2069 or
+                    ord(ch) == 0x061C or ord(ch) == 0x1EFC
+                )
+            )
             output_file.write_text(rust_code, encoding='utf-8')
             results[lexer_name] = f'generated:{output_file}'
         except Exception as e:
@@ -797,13 +971,17 @@ Examples:
     print(f"{'='*60}")
 
     generated = [k for k, v in results.items() if v.startswith('generated:')]
-    skipped = [k for k, v in results.items() if v == 'skipped_template']
+    generated_del = [k for k, v in results.items() if v.startswith('generated_delegating:')]
+    skipped_template = [k for k, v in results.items() if v == 'skipped_template']
+    skipped_missing = [k for k, v in results.items() if v.startswith('skipped:')]
     existing = [k for k, v in results.items() if v == 'already_exists']
-    errors = [k for k, v in results.items() if v.startswith('error') or v.startswith('generate_error') or v.startswith('extract_error') or v.startswith('import_error')]
+    errors = [k for k, v in results.items() if v.startswith('error') or v.startswith('generate_error') or v.startswith('extract_error') or v.startswith('import_error') or v.startswith('parse_error')]
     no_tokens = [k for k, v in results.items() if v == 'no_tokens']
 
     print(f"  Generated: {len(generated)}")
-    print(f"  Skipped (template): {len(skipped)}")
+    print(f"  Generated (DelegatingLexer): {len(generated_del)}")
+    print(f"  Skipped (template): {len(skipped_template)}")
+    print(f"  Skipped (missing root/lang module): {len(skipped_missing)}")
     print(f"  Already exists: {len(existing)}")
     print(f"  No tokens: {len(no_tokens)}")
     print(f"  Errors: {len(errors)}")

@@ -45,7 +45,7 @@ impl CrystalLexer {
             root_rules.push(LexerRule { pattern: TokenPattern::new(r#"\$[!@&`\'+~=/\\,;.<>_*$?:"^-]"#, Token::NAME_VARIABLE_GLOBAL).unwrap(), action: LexerAction::token(Token::NAME_VARIABLE_GLOBAL) });
             root_rules.push(LexerRule { pattern: TokenPattern::new(r"\$-[0adFiIlpvw]", Token::NAME_VARIABLE_GLOBAL).unwrap(), action: LexerAction::token(Token::NAME_VARIABLE_GLOBAL) });
             root_rules.push(LexerRule { pattern: TokenPattern::new(r"::", Token::OPERATOR).unwrap(), action: LexerAction::token(Token::OPERATOR) });
-            root_rules.push(LexerRule { pattern: TokenPattern::new(r##"\?(\\[MC]-)*(\\([\\abefnrtv#"\']|[0-7]{1,3}|x[a-fA-F0-9]{2}|u[a-fA-F0-9]{4}|u\{[a-fA-F0-9 ]+\})|\S)(?!\w)"##, Token::STRING_CHAR).unwrap(), action: LexerAction::token(Token::STRING_CHAR) });
+            root_rules.push(LexerRule { pattern: TokenPattern::new(r#"\?(\\[MC]-)*(\\([\\abefnrtv#"\']|[0-7]{1,3}|x[a-fA-F0-9]{2}|u[a-fA-F0-9]{4}|u\{[a-fA-F0-9 ]+\})|\S)(?!\w)"#, Token::STRING_CHAR).unwrap(), action: LexerAction::token(Token::STRING_CHAR) });
             root_rules.push(LexerRule { pattern: TokenPattern::new(r"[A-Z][A-Z_]+\b(?!::|\.)", Token::NAME_CONSTANT).unwrap(), action: LexerAction::token(Token::NAME_CONSTANT) });
             root_rules.push(LexerRule { pattern: TokenPattern::new(r"\{%", Token::STRING_INTERPOL).unwrap(), action: LexerAction::Push("in-macro-control".to_string()) });
             root_rules.push(LexerRule { pattern: TokenPattern::new(r"\{\{", Token::STRING_INTERPOL).unwrap(), action: LexerAction::Push("in-macro-expr".to_string()) });
@@ -78,7 +78,7 @@ impl CrystalLexer {
 
         // State: string-escaped
         inner.states.insert("string-escaped".to_string(), vec![
-            LexerRule { pattern: TokenPattern::new(r##"\\([\\abefnrtv#"\']|[0-7]{1,3}|x[a-fA-F0-9]{2}|u[a-fA-F0-9]{4}|u\{[a-fA-F0-9 ]+\})"##, Token::STRING_ESCAPE).unwrap(), action: LexerAction::token(Token::STRING_ESCAPE) },
+            LexerRule { pattern: TokenPattern::new(r#"\\([\\abefnrtv#"\']|[0-7]{1,3}|x[a-fA-F0-9]{2}|u[a-fA-F0-9]{4}|u\{[a-fA-F0-9 ]+\})"#, Token::STRING_ESCAPE).unwrap(), action: LexerAction::token(Token::STRING_ESCAPE) },
         ]);
 
         // State: interpolated-regex
@@ -154,14 +154,14 @@ impl CrystalLexer {
 
         // State: simple-string
         inner.states.insert("simple-string".to_string(), vec![
-            LexerRule { pattern: TokenPattern::new(r#"[^\\"#]+"#, Token::STRING_DOUBLE).unwrap(), action: LexerAction::token(Token::STRING_DOUBLE) },
+            LexerRule { pattern: TokenPattern::new(r##"[^\\"#]+"##, Token::STRING_DOUBLE).unwrap(), action: LexerAction::token(Token::STRING_DOUBLE) },
             LexerRule { pattern: TokenPattern::new(r"[\\#]", Token::STRING_DOUBLE).unwrap(), action: LexerAction::token(Token::STRING_DOUBLE) },
             LexerRule { pattern: TokenPattern::new(r##"""##, Token::STRING_DOUBLE).unwrap(), action: LexerAction::PopN(1) },
         ]);
 
         // State: simple-sym
         inner.states.insert("simple-sym".to_string(), vec![
-            LexerRule { pattern: TokenPattern::new(r#"[^\\"#]+"#, Token::STRING_SYMBOL).unwrap(), action: LexerAction::token(Token::STRING_SYMBOL) },
+            LexerRule { pattern: TokenPattern::new(r##"[^\\"#]+"##, Token::STRING_SYMBOL).unwrap(), action: LexerAction::token(Token::STRING_SYMBOL) },
             LexerRule { pattern: TokenPattern::new(r"[\\#]", Token::STRING_SYMBOL).unwrap(), action: LexerAction::token(Token::STRING_SYMBOL) },
             LexerRule { pattern: TokenPattern::new(r##"""##, Token::STRING_SYMBOL).unwrap(), action: LexerAction::PopN(1) },
         ]);

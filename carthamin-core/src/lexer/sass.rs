@@ -117,7 +117,7 @@ impl SassLexer {
 
         // State: string-double
         inner.states.insert("string-double".to_string(), vec![
-            LexerRule { pattern: TokenPattern::new(r#"(\\.|#(?=[^\n{])|[^\n"#])+"#, Token::STRING_DOUBLE).unwrap(), action: LexerAction::token(Token::STRING_DOUBLE) },
+            LexerRule { pattern: TokenPattern::new(r##"(\\.|#(?=[^\n{])|[^\n"#])+"##, Token::STRING_DOUBLE).unwrap(), action: LexerAction::token(Token::STRING_DOUBLE) },
             LexerRule { pattern: TokenPattern::new(r"#\{", Token::STRING_INTERPOL).unwrap(), action: LexerAction::Push("interpolation".to_string()) },
             LexerRule { pattern: TokenPattern::new(r##"""##, Token::STRING_DOUBLE).unwrap(), action: LexerAction::PopN(1) },
         ]);

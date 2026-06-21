@@ -202,7 +202,7 @@ impl XQueryLexer {
             LexerRule { pattern: TokenPattern::new(r"'", Token::PUNCTUATION).unwrap(), action: LexerAction::Push("start_tag".to_string()) },
             LexerRule { pattern: TokenPattern::new(r"\{", Token::PUNCTUATION).unwrap(), action: LexerAction::Push("root".to_string()) },
             LexerRule { pattern: TokenPattern::new(r"''", Token::NAME_ATTRIBUTE).unwrap(), action: LexerAction::token(Token::NAME_ATTRIBUTE) },
-            LexerRule { pattern: TokenPattern::new(r#"[A-Za-z]|\s|\d|[!"#$%()*+,\-./:;=?@\[\\\]^_`|~]"#, Token::NAME_ATTRIBUTE).unwrap(), action: LexerAction::token(Token::NAME_ATTRIBUTE) },
+            LexerRule { pattern: TokenPattern::new(r##"[A-Za-z]|\s|\d|[!"#$%()*+,\-./:;=?@\[\\\]^_`|~]"##, Token::NAME_ATTRIBUTE).unwrap(), action: LexerAction::token(Token::NAME_ATTRIBUTE) },
             LexerRule { pattern: TokenPattern::new(r"(?:&(?:lt|gt|amp|quot|apos|nbsp);)", Token::NAME_ATTRIBUTE).unwrap(), action: LexerAction::token(Token::NAME_ATTRIBUTE) },
             LexerRule { pattern: TokenPattern::new(r"(?:&#[0-9]+;|&#x[0-9a-fA-F]+;)", Token::NAME_ATTRIBUTE).unwrap(), action: LexerAction::token(Token::NAME_ATTRIBUTE) },
             LexerRule { pattern: TokenPattern::new(r"\{\{|\}\}", Token::NAME_ATTRIBUTE).unwrap(), action: LexerAction::token(Token::NAME_ATTRIBUTE) },
@@ -211,7 +211,7 @@ impl XQueryLexer {
         // State: element_content
         inner.states.insert("element_content".to_string(), vec![
             LexerRule { pattern: TokenPattern::new(r"</", Token::NAME_TAG).unwrap(), action: LexerAction::Push("end_tag".to_string()) },
-            LexerRule { pattern: TokenPattern::new(r#"[A-Za-z]|\s|\d|[!"#$%()*+,\-./:;=?@\[\\\]^_\'`|~]"#, Token::LITERAL).unwrap(), action: LexerAction::token(Token::LITERAL) },
+            LexerRule { pattern: TokenPattern::new(r##"[A-Za-z]|\s|\d|[!"#$%()*+,\-./:;=?@\[\\\]^_\'`|~]"##, Token::LITERAL).unwrap(), action: LexerAction::token(Token::LITERAL) },
             LexerRule { pattern: TokenPattern::new(r"(?:&(?:lt|gt|amp|quot|apos|nbsp);)", Token::LITERAL).unwrap(), action: LexerAction::token(Token::LITERAL) },
             LexerRule { pattern: TokenPattern::new(r"(?:&#[0-9]+;|&#x[0-9a-fA-F]+;)", Token::LITERAL).unwrap(), action: LexerAction::token(Token::LITERAL) },
             LexerRule { pattern: TokenPattern::new(r"\{\{|\}\}", Token::LITERAL).unwrap(), action: LexerAction::token(Token::LITERAL) },
