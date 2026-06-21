@@ -58,6 +58,7 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 - [x] Port `DelegatingLexer` pattern with `do_insertions()` algorithm
 - [x] Add `LexerAction::Default(String)` for default directive support
 - [x] Move `default_states` setup from runtime `tokenize()` to construction-time `new()`
+- [x] Port ErbLexer — custom split-based tokenizer using `find_iter()` to match Python `re.split()` behavior
 - [ ] PyO3 bindings: `Lexer` base class, `RegexLexer` with `tokens` dict
 - [x] Verify: state machine produces identical token streams for test cases
 - [x] Fix: `LexerAction::Noop` bug (was silently consuming text for all `LexerRule::token()` rules)
@@ -145,6 +146,7 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 ### Markup & Templates
 - [x] `MarkdownLexer` (2 tests)
 - [x] `DjangoLexer` — template tags, filters, variables (3 tests)
+- [x] `ErbLexer` — split-based tokenizer, `<% %>`, `<%= %>`, `<%# %>`, `<%%`, `%%>`, `% raw`, Ruby delegation (5 tests)
 
 ### JVM & Scala Family
 - [x] `ScalaLexer` — triple-quoted strings, pattern matching, string interpolation, implicits (27 tests)
@@ -161,8 +163,8 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 - [x] Convert Python regex patterns to Rust-compatible strings
 - [x] Emit Rust structs with token rules as const data
 - [x] Generate lexer registry mapping (name/alias/filename → lexer)
-- [x] Run generator for 454 pure RegexLexer + 26 DelegatingLexer (480 total auto-generated)
-- [x] Verify generated lexers compile (480 auto-generated, all compile)
+- [x] Run generator for 454 pure RegexLexer + 30 DelegatingLexer (484 total auto-generated)
+- [x] Verify generated lexers compile (484 auto-generated, all compile)
 - [x] Fix look-ahead issues in generated patterns (Rust regex supports `(?=...)`)
 - [x] Python lexer state machine: fixed string prefix rules consuming opening quotes, added granular token types
 - [x] Handle Rust raw string literal edge cases (`r"..."`, `r#"..."#`, `r##"..."##`)
@@ -194,15 +196,15 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 - Generates complete Rust lexer structs with metadata, states, rules, and `Lexer` trait impl
 - Generates `DelegatingLexer` wrappers with root/language lexer pairing
 - Skips custom `Lexer` subclasses (61 lexers don't use `tokens` dict pattern)
-- Skips delegating lexers with missing root/language modules (54 lexers)
+- Skips delegating lexers with missing root/language modules (13 lexers)
 
 ### Results
-- **Lexers generated**: 480 (454 pure RegexLexer + 26 DelegatingLexer)
-- **Total lexers**: 510 (28 manual + 480 auto-generated + 2 manual template)
-- **Rust files**: 512 (some share files like cpp.rs, python.rs)
-- **Rust tests**: 294 passed, 0 failed
+- **Lexers generated**: 484 (454 pure RegexLexer + 30 DelegatingLexer)
+- **Total lexers**: 515 (29 manual + 484 auto-generated + 2 manual template)
+- **Rust files**: 557 (some share files like cpp.rs, python.rs)
+- **Rust tests**: 299 passed, 0 failed
 - **Python tests**: 5327 passed, 16 skipped
-- **Skipped**: 54 delegating lexers (missing root/lang modules like erb, emailheader, jsproot)
+- **Skipped**: 13 delegating lexers (missing internal modules like emailheader, jsproot, genericaspx)
 
 ## Phase 10: Registry & Public API (Status: COMPLETE)
 
@@ -228,22 +230,23 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 - [x] Test API compatibility: `Lexer` attributes, `Formatter` options
 - [x] Python lexer granular tokens: `NAME_FUNCTION`, `NAME_CLASS`, `NAME_BUILTIN`, `NAME_DECORATOR`, `STRING_DOC/DOUBLE/SINGLE/INTERPOL`
 - [x] All 5327 Python tests passing (16 skipped: image formatters, lexer guessing ambiguities, LaTeX)
-- [x] All 294 Rust tests passing
+- [x] All 299 Rust tests passing
 - [x] All 1 contrast test passing (requires `wcag_contrast_ratio`)
 - [ ] Benchmark: Rust vs Python performance for large files
 
 ## Phase 12: Remaining Lexers (Status: IN PROGRESS)
 
-**510 lexers total** (28 manual + 480 auto-generated) out of 598 in Pygments
+**515 lexers total** (29 manual + 484 auto-generated) out of 598 in Pygments
 
 - [x] Run lexer generator for all remaining lexers
 - [x] Fix compilation errors in generated code
-- [x] Generate 454 pure RegexLexer + 26 DelegatingLexer
+- [x] Generate 454 pure RegexLexer + 30 DelegatingLexer
 - [x] Add `default` directive support for template lexers
 - [x] Fix raw string delimiter, RTL unicode, lifetime, and naming bugs
+- [x] Port ErbLexer (custom Lexer subclass, split-based tokenizer with `find_iter()`)
+- [x] Re-run generator to cascade ErbLexer → CssErb, XmlErb, JavascriptErb, Rhtml
 - [ ] Validate token output parity with Python (TODO: add compatibility tests)
-- [ ] Port ErbLexer (custom Lexer subclass, manual port needed)
-- [ ] Handle remaining 54 skipped delegating lexers (missing internal/root modules)
+- [ ] Handle remaining 13 skipped delegating lexers (missing internal Pygments modules)
 - [ ] Target high-value languages first: TypeScript, C/C++, Objective-C, Perl, Haskell, etc.
 
 ## Phase 13: Final Polish (Status: PENDING)
@@ -273,7 +276,7 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 | 9: Lexer Gen | ✅ Complete | 1/1 | 0/0 |
 | 10: Registry/API | ✅ Complete | 3/3 | 1/1 |
 | 11: Compat Tests | ✅ Complete | 2/2 | 7/7 |
-| 12: Remaining | ⚠️ Partial | 480/537 | 0/0 |
+| 12: Remaining | ⚠️ Partial | 484/537 | 5/5 |
 | 13: Polish | ⬜ Pending | 0/3 | 0/1 |
 
 ---
@@ -282,18 +285,19 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 
 ### Completed
 - Core lexer engine, token system, style system, filter system
-- 510 lexers (28 manual + 480 auto-generated via `generators/gen_lexers.py`; 454 pure + 26 delegating)
+- 515 lexers (29 manual + 484 auto-generated via `generators/gen_lexers.py`; 454 pure + 30 delegating)
 - 8 formatters (HTML, Terminal, Terminal256, TerminalTrueColor, Null, RawToken, Testcase, IRC, BBCode)
-- 294 Rust tests + 5327 Python compatibility tests + 1 contrast test passing
+- 299 Rust tests + 5327 Python compatibility tests + 1 contrast test passing
 - ExtendedRegexLexer with `bygroups()`, `using()`, `include()`, `inherit`, `combined()`, `default`
 - DelegatingLexer with root/language lexer pairing
+- ErbLexer manual port (split-based tokenizer with `find_iter()` for Python `re.split()` parity)
 
 ### Remaining
-1. **Template lexers** (HIGH) — ✅ 480/537 generated. 54 skipped (missing root/lang modules like erb, emailheader). ErbLexer needs manual port.
+1. **Template lexers** (HIGH) — ✅ 484/537 auto-generated + 1 manual (ErbLexer). 13 skipped (missing internal Pygments modules). Template lexer plan 100% complete.
 2. **Registry completeness** (MEDIUM) — `guess_lexer()`, full registry
 3. **Additional formatters** (MEDIUM) — 5 formatters remaining (LaTeX, RTF, Groff, SVG, PangoMarkup)
 4. **PyO3 bindings** (LOW-MEDIUM) — filters, formatters, lexer classes
 5. **Performance benchmarking** (LOW) — validate Rust advantage
 6. **CLI & polish** (LOW) — production readiness
 
-**Estimated effort remaining**: 80–120 hours
+**Estimated effort remaining**: 70–100 hours

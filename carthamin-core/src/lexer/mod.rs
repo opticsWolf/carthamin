@@ -29,6 +29,11 @@ pub mod makefile;
 pub mod scala;
 pub mod julia;
 pub mod django;
+pub mod erb;
+pub mod csserb;
+pub mod javascripterb;
+pub mod rhtml;
+pub mod xmlerb;
 
 
 
