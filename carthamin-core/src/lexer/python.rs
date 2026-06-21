@@ -55,20 +55,21 @@ impl PythonLexer {
         root_rules.push(LexerRule { pattern: TokenPattern::new(r##"[rRbB]{0,2}""##, Token::STRING_DOUBLE).unwrap(), action: LexerAction::push("dqs") });
         root_rules.push(LexerRule { pattern: TokenPattern::new(r"[rRbB]{0,2}'", Token::STRING_SINGLE).unwrap(), action: LexerAction::push("sqs") });
 
-        // Keywords (not def/class/from/import which have special handling below)
+        // def, class, case (push to name states for granular token types) - must be before generic keyword rule
+        root_rules.push(LexerRule { pattern: TokenPattern::new(r"(def)\b", Token::KEYWORD).unwrap(), action: LexerAction::push("funcname") });
+        root_rules.push(LexerRule { pattern: TokenPattern::new(r"(class)\b", Token::KEYWORD).unwrap(), action: LexerAction::push("classname") });
+        root_rules.push(LexerRule { pattern: TokenPattern::new(r"(case)\b", Token::KEYWORD).unwrap(), action: LexerAction::push("casepattern") });
+
+        // Keywords (not def/class/case/from/import which have special handling above)
         let keywords = [
             "False", "None", "True", "as", "assert", "async", "await",
-            "break", "continue", "del", "elif", "else",
+            "break", "case", "continue", "del", "elif", "else",
             "except", "finally", "for", "global", "if",
-            "lambda", "nonlocal", "pass", "raise",
+            "lambda", "match", "nonlocal", "pass", "raise",
             "return", "try", "while", "with", "yield",
         ];
         let kw_pattern = format!(r"({})\b", keywords.join("|"));
         root_rules.push(LexerRule { pattern: TokenPattern::new(&kw_pattern, Token::KEYWORD).unwrap(), action: LexerAction::token(Token::KEYWORD) });
-
-        // def and class (push to name states for granular token types)
-        root_rules.push(LexerRule { pattern: TokenPattern::new(r"(def)\b", Token::KEYWORD).unwrap(), action: LexerAction::push("funcname") });
-        root_rules.push(LexerRule { pattern: TokenPattern::new(r"(class)\b", Token::KEYWORD).unwrap(), action: LexerAction::push("classname") });
 
         // from ... import / import
         root_rules.push(LexerRule { pattern: TokenPattern::new(r"(from)\b", Token::KEYWORD_NAMESPACE).unwrap(), action: LexerAction::push("fromimport") });
@@ -132,10 +133,17 @@ impl PythonLexer {
             LexerRule { pattern: TokenPattern::new(&classname_pattern, Token::NAME_CLASS).unwrap(), action: LexerAction::pop(1) },
         ]);
 
+        // Case pattern state (PEP 634) - class names in case patterns get NAME_CLASS
+        inner.states.insert("casepattern".to_string(), vec![
+            LexerRule { pattern: TokenPattern::new(r"[ \t]+", Token::WHITESPACE).unwrap(), action: LexerAction::token(Token::WHITESPACE) },
+            LexerRule { pattern: TokenPattern::new(&classname_pattern, Token::NAME_CLASS).unwrap(), action: LexerAction::pop(1) },
+        ]);
+
         // Import state
         let ns_pattern = format!("[{}][{}.]*", XID_START, XID_CONTINUE);
         inner.states.insert("import".to_string(), vec![
             LexerRule { pattern: TokenPattern::new(r"[ \t]+", Token::WHITESPACE).unwrap(), action: LexerAction::token(Token::WHITESPACE) },
+            LexerRule { pattern: TokenPattern::new(r"\\\n", Token::WHITESPACE).unwrap(), action: LexerAction::token(Token::WHITESPACE) },
             LexerRule { pattern: TokenPattern::new(&ns_pattern, Token::NAME_NAMESPACE).unwrap(), action: LexerAction::token(Token::NAME_NAMESPACE) },
             LexerRule { pattern: TokenPattern::new(r"\n", Token::WHITESPACE).unwrap(), action: LexerAction::pop(1) },
         ]);
@@ -144,6 +152,7 @@ impl PythonLexer {
         let ns_pattern_from = format!("[{}][{}.]*", XID_START, XID_CONTINUE);
         inner.states.insert("fromimport".to_string(), vec![
             LexerRule { pattern: TokenPattern::new(r"[ \t]+", Token::WHITESPACE).unwrap(), action: LexerAction::token(Token::WHITESPACE) },
+            LexerRule { pattern: TokenPattern::new(r"\\\n", Token::WHITESPACE).unwrap(), action: LexerAction::token(Token::WHITESPACE) },
             LexerRule { pattern: TokenPattern::new(&ns_pattern_from, Token::NAME_NAMESPACE).unwrap(), action: LexerAction::token(Token::NAME_NAMESPACE) },
             LexerRule { pattern: TokenPattern::new(r"(import)\b", Token::KEYWORD_NAMESPACE).unwrap(), action: LexerAction::push("import") },
             LexerRule { pattern: TokenPattern::new(r"\n", Token::WHITESPACE).unwrap(), action: LexerAction::pop(1) },

@@ -2,7 +2,7 @@
 
 **Last Updated**: 2026-06-21
 **Overall Status**: Core lexer engine, 458 lexers (28 manual + 430 auto-generated), 8 formatters, ExtendedRegexLexer.
-**Test Results**: Rust: 206 passed | Python Compat: 5310 passed | Python Style: 23 passed | Unicode Parity: 12 passed | **Total: 5551 passed, 0 failed**
+**Test Results**: Rust: 293 passed | Python Compat: 5310 passed | Python Style: 23 passed | Unicode Parity: 12 passed | **Total: 5638 passed, 0 failed**
 
 ---
 
@@ -51,7 +51,7 @@ The refactor plan maps the Pygments Python library to a Rust implementation with
 | 8 | Critical Lexers | ✅ Complete | 30 lexers ported and tested |
 | 9 | Lexer Code Generation | ✅ Complete | AST parser, generator for remaining lexers |
 | 10 | Registry & Public API | ✅ Partial | lex(), format(), highlight() exposed |
-| 11 | Compatibility Tests | ✅ Complete | 5310 Python tests, 171 Rust tests |
+| 11 | Compatibility Tests | ✅ Complete | 5310 Python tests, 293 Rust tests |
 | 12 | Remaining Lexers | ✅ Complete | 430 lexers auto-generated (458 total, 28 manual + 430 generated) |
 | 13 | Final Polish | ⬜ Pending | CLI, plugin system, docs, CI/CD |
 
@@ -213,13 +213,13 @@ The token system is the foundation of the entire lexer architecture. It mirrors 
 
 | Lexer | Tests | Key Features |
 |-------|-------|--------------|
-| Python | 14 | f-string state machine, granular tokens, Unicode identifiers |
+| Python | 34 | f-string state machine, granular tokens, Unicode identifiers, PEP 634 match/case, line continuation |
 | JavaScript | 6 | ES6+ template literals, operators |
 | Kotlin | 17 | shebang, generics, extension functions, nullable types |
 | PHP | 13 | heredoc/nowdoc, function args state, string interpolation |
 | CSS | 5 | selectors, properties, values |
 | HTML/XML | 5 | tag matching, attribute parsing |
-| C/C++ | 5 | preprocessor, operators, types |
+| C/C++ | 27 | preprocessor, operators, types, attributes, templates, lambdas, noexcept, constexpr |
 | Rust | 5 | lifetimes, generics, attributes |
 | Go | 4 | generics, operators |
 | Java | 4 | generics, annotations |
@@ -236,12 +236,12 @@ The token system is the foundation of the entire lexer architecture. It mirrors 
 | YAML | 2 | plain scalars, block literals |
 | Protobuf | 2 | message definitions |
 | Terraform | 2 | HCL2, heredocs |
-| Makefile | 2 | targets, variables, recipes |
+| Makefile | 27 | targets, variables, directives, automatic variables, recipe lines, functions, conditionals |
 | Docker | 2 | Dockerfile directives |
 | PostgreSQL | 2 | comments, regex operators |
 | Markdown | 2 | headings, code blocks |
 | Django | 3 | template tags, filters |
-| Scala | 2 | triple-quoted strings |
+| Scala | 27 | triple-quoted strings, pattern matching, string interpolation, implicits, case classes, traits |
 | TOML | 2 | key-value pairs |
 
 #### Auto-Generated Lexers (430)
@@ -331,7 +331,7 @@ The lexer code generator is a comprehensive Python script that:
 - **Skipped**: 78 template lexers (need ExtendedRegexLexer), 61 custom Lexer subclasses
 - **Rust files**: 462 (some share files like cpp.rs, python.rs)
 - **All compile**: ✅ Yes
-- **Tests passing**: 171 Rust + 5310 Python
+- **Tests passing**: 293 Rust + 5310 Python
 
 #### Skipped Categories
 - **Template lexers** (78): Require `ExtendedRegexLexer` with `using()`, `bygroups()`, `include()` support
@@ -378,7 +378,7 @@ The lexer code generator is a comprehensive Python script that:
 **Current State:**
 - 458 lexers total: 28 manually ported + 430 auto-generated
 - `generators/gen_lexers.py` — fully functional AST parser and code generator
-- 171 Rust tests passing (122 lexer tests + 49 other)
+- 293 Rust tests passing (283 lexer tests + 10 other)
 - 5310 Python compatibility tests passing
 
 **Missing (now handled by generator):**
@@ -606,11 +606,11 @@ The following roadmap prioritizes gaps by impact and dependency:
 ### Current Test Results
 | Category | Tests | Passed | Failed |
 |----------|-------|--------|--------|
-| Rust Unit Tests | 206 | 206 | 0 |
+| Rust Unit Tests | 293 | 293 | 0 |
 | Python Compatibility Tests | 5310 | 5310 | 0 |
 | Python Style Compatibility Tests | 23 | 23 | 0 |
 | Unicode Parity Tests | 12 | 12 | 0 |
-| **Total** | **5551** | **5551** | **0** |
+| **Total** | **5638** | **5638** | **0** |
 
 ### Test Coverage by Component
 | Component | Rust Tests | Python Tests | Coverage |
@@ -621,7 +621,7 @@ The following roadmap prioritizes gaps by impact and dependency:
 | Scanner/Lexer Engine | 12 | 0 | Full (incl. ExtendedRegexLexer) |
 | Filter System | 3 | 0 | Partial |
 | Formatters | 10 | 2 | Partial |
-| Language Lexers | 171 | 0 | Full (458 lexers) |
+| Language Lexers | 283 | 0 | Full (458 lexers) |
 | Registry | 2 | 0 | Partial |
 | PyO3 Bindings | 0 | 7 | Partial |
 | Unicode | 8 | 12 | Full |
@@ -794,7 +794,7 @@ Carthamin has successfully implemented the core lexer engine, token system, styl
 - Core lexer engine, token system, style system, filter system
 - 458 lexers (28 manual + 430 auto-generated via `generators/gen_lexers.py`)
 - 8 formatters (HTML, Terminal, Terminal256, TerminalTrueColor, Null, RawToken, Testcase, IRC, BBCode)
-- 206 Rust tests + 5310 Python compatibility tests passing
+- 293 Rust tests + 5310 Python compatibility tests passing
 
 ### Remaining
 1. **Extended Regex Lexer** (HIGH) — ✅ Core features implemented. Integration with template lexers needed.

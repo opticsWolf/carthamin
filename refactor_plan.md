@@ -103,11 +103,11 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 **30 lexers manually ported and tested**
 
 ### Core Languages
-- [x] `PythonLexer` / `Python3Lexer` — granular token types: `NAME_FUNCTION`, `NAME_CLASS`, `NAME_BUILTIN`, `NAME_DECORATOR`, `NAME_NAMESPACE`, `NUMBER_INTEGER/FLOAT/HEX/BIN`, `STRING_DOC/DOUBLE/SINGLE/INTERPOL/ESCAPE`, `OPERATOR_WORD`, fixed f-string state machine (14 tests)
+- [x] `PythonLexer` / `Python3Lexer` — granular token types: `NAME_FUNCTION`, `NAME_CLASS`, `NAME_BUILTIN`, `NAME_DECORATOR`, `NAME_NAMESPACE`, `NUMBER_INTEGER/FLOAT/HEX/BIN`, `STRING_DOC/DOUBLE/SINGLE/INTERPOL/ESCAPE`, `OPERATOR_WORD`, fixed f-string state machine (34 tests)
 - [x] `JavaScriptLexer` — ES6+ with template literals, operators, keywords, strings (6 tests)
 - [x] `CssLexer` (5 tests)
 - [x] `HtmlLexer` / `XmlLexer` (5 tests)
-- [x] `CLexer` / `CppLexer` (5 tests)
+- [x] `CLexer` / `CppLexer` (27 tests)
 - [x] `RustLexer` (5 tests)
 - [x] `GoLexer` (4 tests)
 - [x] `JavaLexer` (4 tests)
@@ -130,7 +130,7 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 - [x] `YamlLexer` — plain scalars, block literals, anchors, tags (2 tests)
 - [x] `ProtobufLexer` (2 tests)
 - [x] `TerraformLexer` — HCL2, heredocs, interpolation (2 tests)
-- [x] `MakefileLexer` — targets, variables, directives, recipes (2 tests)
+- [x] `MakefileLexer` — targets, variables, directives, automatic variables, recipe lines, functions, conditionals (27 tests)
 
 ### Infrastructure & DevOps
 - [x] `DockerLexer` — Dockerfile directives, multi-stage builds (2 tests)
@@ -143,10 +143,10 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 - [x] `DjangoLexer` — template tags, filters, variables (3 tests)
 
 ### JVM & Scala Family
-- [x] `ScalaLexer` — triple-quoted strings, operators, keywords (2 tests)
+- [x] `ScalaLexer` — triple-quoted strings, pattern matching, string interpolation, implicits (27 tests)
 
 - [x] Verify each lexer against existing test cases (129 Rust lexer tests, 4 style tests, 34 other tests)
-- [x] All tests passing: `cargo test` (171 passed), `pytest` (5310 passed, 16 skipped)
+- [x] All tests passing: `cargo test` (293 passed), `pytest` (5310 passed, 16 skipped)
 
 ## Phase 9: Lexer Code Generation (Status: COMPLETE)
 
@@ -183,7 +183,7 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 - **Lexers generated**: 430
 - **Total lexers**: 458 (28 manual + 430 auto-generated)
 - **Rust files**: 462 (some share files like cpp.rs, python.rs)
-- **Rust tests**: 171 passed, 0 failed
+- **Rust tests**: 293 passed, 0 failed
 - **Python tests**: 5310 passed, 16 skipped
 - **Skipped**: 78 template lexers (need ExtendedRegexLexer), 61 custom Lexer subclasses
 
@@ -211,7 +211,7 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 - [x] Test API compatibility: `Lexer` attributes, `Formatter` options
 - [x] Python lexer granular tokens: `NAME_FUNCTION`, `NAME_CLASS`, `NAME_BUILTIN`, `NAME_DECORATOR`, `STRING_DOC/DOUBLE/SINGLE/INTERPOL`
 - [x] All 5310 Python tests passing (16 skipped: image formatters, lexer guessing ambiguities, LaTeX)
-- [x] All 171 Rust tests passing
+- [x] All 293 Rust tests passing
 - [ ] Benchmark: Rust vs Python performance for large files
 
 ## Phase 12: Remaining Lexers (Status: COMPLETE)
@@ -263,7 +263,7 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 - Core lexer engine, token system, style system, filter system
 - 458 lexers (28 manual + 430 auto-generated via `generators/gen_lexers.py`)
 - 8 formatters (HTML, Terminal, Terminal256, TerminalTrueColor, Null, RawToken, Testcase, IRC, BBCode)
-- 206 Rust tests + 5310 Python compatibility tests passing
+- 293 Rust tests + 5310 Python compatibility tests passing
 
 ### Remaining
 1. **Extended Regex Lexer** (HIGH) — ✅ Core features implemented (`ExtendedRegexLexer`, `DelegatingLexer`, `bygroups()`, `using()`, `include()`, `inherit`, `combined()`). Integration with template lexers needed.

@@ -146,6 +146,10 @@ All styles follow identical pattern: subclass `Style`, define `styles` dict mapp
 | **Composition** (delegating/embedded) | ~20 | High | Complex inheritance |
 | **Template lexers** | ~13 | Medium | Django, Jinja, Mako, etc. |
 
+### 5.2 Lexer Status
+
+**458 lexers total** (28 manual + 430 auto-generated) out of 598 in Pygments.
+
 ### 5.2 Key Lexer Files (by priority)
 
 **Critical** (port first):
