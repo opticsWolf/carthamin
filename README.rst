@@ -79,9 +79,7 @@ Lexers
 
 ### Core Languages (12)
 
-Python (with granular token types: ``NAME_FUNCTION``, ``NAME_CLASS``, ``NAME_BUILTIN``,
-``NAME_DECORATOR``, ``STRING_DOC/DOUBLE/SINGLE/INTERPOL``, ``NUMBER_INTEGER/FLOAT/HEX/BIN``,
-``OPERATOR_WORD``), JavaScript, CSS, HTML/XML, C/C++, Rust, Go, Java, SQL, Bash, C#, Swift
+Python, JavaScript, CSS, HTML/XML, C/C++, Rust, Go, Java, SQL, Bash, C#, Swift
 
 ### Scripting & Dynamic (7)
 

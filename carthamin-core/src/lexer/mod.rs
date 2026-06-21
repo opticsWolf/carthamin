@@ -266,7 +266,7 @@ impl RegexLexer {
                 // No rule matched at current position — consume one character as Text
                 let ch_end = text[pos..].char_indices().nth(1)
                     .map(|(i, _)| pos + i)
-                    .unwrap_or(pos + 1);
+                    .unwrap_or(text.len());
                 tokens.push(TokenStreamItem {
                     index,
                     token_type: Token::TEXT,
@@ -341,5 +341,41 @@ mod tests {
         assert!(token_types.contains(&Token::KEYWORD));
         assert!(token_types.contains(&Token::NAME));
         assert!(token_types.contains(&Token::WHITESPACE));
+    }
+
+    #[test]
+    fn test_multi_byte_char_fallback_at_end() {
+        // Regression: multi-byte chars (emoji) at end of input that don't match
+        // any rule must not panic via byte-boundary truncation.
+        let mut lexer = RegexLexer::new("test");
+        lexer.add_rule("root", LexerRule {
+            pattern: TokenPattern::new(r"\s+", Token::WHITESPACE).unwrap(),
+            action: LexerAction::token(Token::WHITESPACE),
+        });
+        lexer.add_rule("root", LexerRule {
+            pattern: TokenPattern::new(r"[a-zA-Z_]\w*", Token::NAME).unwrap(),
+            action: LexerAction::token(Token::NAME),
+        });
+
+        // Emoji alone — falls through to fallback path
+        let tokens = lexer.tokenize("😊");
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(tokens[0].text, "😊");
+        assert_eq!(tokens[0].token_type, Token::TEXT);
+    }
+
+    #[test]
+    fn test_multi_byte_char_fallback_after_identifier() {
+        // Emoji after a matched identifier — fallback triggered at end
+        let mut lexer = RegexLexer::new("test");
+        lexer.add_rule("root", LexerRule {
+            pattern: TokenPattern::new(r"[a-zA-Z_]\w*", Token::NAME).unwrap(),
+            action: LexerAction::token(Token::NAME),
+        });
+
+        let tokens = lexer.tokenize("x😊");
+        assert_eq!(tokens.len(), 2);
+        assert_eq!(tokens[0].text, "x");
+        assert_eq!(tokens[1].text, "😊");
     }
 }
