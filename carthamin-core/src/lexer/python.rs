@@ -155,8 +155,8 @@ impl PythonLexer {
         // Triple double-quoted string content
         inner.states.insert("tdqs".to_string(), vec![
             LexerRule { pattern: TokenPattern::new(TRIPLE_DQ, Token::STRING_DOC).unwrap(), action: LexerAction::pop(1) },
-            LexerRule { pattern: TokenPattern::new(r##"[^"\\]+"##, Token::STRING_DOC).unwrap(), action: LexerAction::token(Token::STRING_DOC) },
-            LexerRule { pattern: TokenPattern::new(r##"\\.|""##, Token::STRING_ESCAPE).unwrap(), action: LexerAction::token(Token::STRING_ESCAPE) },
+            LexerRule { pattern: TokenPattern::new("\\\\", Token::STRING_ESCAPE).unwrap(), action: LexerAction::token(Token::STRING_ESCAPE) },
+            LexerRule { pattern: TokenPattern::new(r#"[^\'"%{\n]+"#, Token::STRING_DOC).unwrap(), action: LexerAction::token(Token::STRING_DOC) },
         ]);
 
         // Triple single-quoted string content
@@ -167,10 +167,11 @@ impl PythonLexer {
         ]);
 
         // Double-quoted string content (after prefix + opening quote consumed)
+        // Matches Pygments' dqs state: close quote, escape, then content
         inner.states.insert("dqs".to_string(), vec![
-            LexerRule { pattern: TokenPattern::new(r##""##, Token::STRING_DOUBLE).unwrap(), action: LexerAction::pop(1) },
-            LexerRule { pattern: TokenPattern::new(r##"[^"\\]+"##, Token::STRING_DOUBLE).unwrap(), action: LexerAction::token(Token::STRING_DOUBLE) },
-            LexerRule { pattern: TokenPattern::new(r##"\\.|""##, Token::STRING_ESCAPE).unwrap(), action: LexerAction::token(Token::STRING_ESCAPE) },
+            LexerRule { pattern: TokenPattern::new("\"", Token::STRING_DOUBLE).unwrap(), action: LexerAction::pop(1) },
+            LexerRule { pattern: TokenPattern::new("\\\\", Token::STRING_ESCAPE).unwrap(), action: LexerAction::token(Token::STRING_ESCAPE) },
+            LexerRule { pattern: TokenPattern::new(r#"[^\'"%{\n]+"# , Token::STRING_DOUBLE).unwrap(), action: LexerAction::token(Token::STRING_DOUBLE) },
         ]);
 
         // Single-quoted string content (after prefix + opening quote consumed)
@@ -183,9 +184,9 @@ impl PythonLexer {
         // f-string triple double-quoted content
         inner.states.insert("tdqf".to_string(), vec![
             LexerRule { pattern: TokenPattern::new(r"\{", Token::STRING_INTERPOL).unwrap(), action: LexerAction::push("fstring-expr") },
-            LexerRule { pattern: TokenPattern::new(r##"[^"\\{]+"##, Token::STRING_DOUBLE).unwrap(), action: LexerAction::token(Token::STRING_DOUBLE) },
-            LexerRule { pattern: TokenPattern::new(r##"\\.|""##, Token::STRING_ESCAPE).unwrap(), action: LexerAction::token(Token::STRING_ESCAPE) },
             LexerRule { pattern: TokenPattern::new(TRIPLE_DQ, Token::STRING_DOC).unwrap(), action: LexerAction::pop(1) },
+            LexerRule { pattern: TokenPattern::new("\\\\", Token::STRING_ESCAPE).unwrap(), action: LexerAction::token(Token::STRING_ESCAPE) },
+            LexerRule { pattern: TokenPattern::new(r#"[^\'"{}\n]+"#, Token::STRING_DOUBLE).unwrap(), action: LexerAction::token(Token::STRING_DOUBLE) },
         ]);
 
         // f-string triple single-quoted content
@@ -197,10 +198,12 @@ impl PythonLexer {
         ]);
 
         // f-string double-quoted content (after prefix + opening quote consumed)
+        // Matches Pygments' dqf state: interpolation, close quote, escape, content
         inner.states.insert("dqf".to_string(), vec![
             LexerRule { pattern: TokenPattern::new(r"\{", Token::STRING_INTERPOL).unwrap(), action: LexerAction::push("fstring-expr") },
-            LexerRule { pattern: TokenPattern::new(r##"[^"\\{]+"##, Token::STRING_DOUBLE).unwrap(), action: LexerAction::token(Token::STRING_DOUBLE) },
-            LexerRule { pattern: TokenPattern::new(r##"\\.|""##, Token::STRING_ESCAPE).unwrap(), action: LexerAction::pop(1) },
+            LexerRule { pattern: TokenPattern::new("\"", Token::STRING_DOUBLE).unwrap(), action: LexerAction::pop(1) },
+            LexerRule { pattern: TokenPattern::new("\\\\", Token::STRING_ESCAPE).unwrap(), action: LexerAction::token(Token::STRING_ESCAPE) },
+            LexerRule { pattern: TokenPattern::new(r#"[^\'"{}\n]+"#, Token::STRING_DOUBLE).unwrap(), action: LexerAction::token(Token::STRING_DOUBLE) },
         ]);
 
         // f-string single-quoted content (after prefix + opening quote consumed)
@@ -361,5 +364,85 @@ mod tests {
         let tokens = lexer.get_tokens("x and y");
         let token_types: Vec<Token> = tokens.iter().map(|(t, _)| *t).collect();
         assert!(token_types.contains(&Token::OPERATOR_WORD));
+    }
+
+    // --- Round-trip reconstruction tests (regression for double-quoted string bug) ---
+
+    fn reconstruct(tokens: &[(Token, String)]) -> String {
+        tokens.iter().map(|(_, t)| t.as_str()).collect()
+    }
+
+    #[test]
+    fn test_roundtrip_simple_string() {
+        let lexer = PythonLexer::new();
+        let input = r#"print("Hello, World!")"#;
+        let tokens = lexer.get_tokens(input);
+        assert_eq!(reconstruct(&tokens), input, "Simple double-quoted string round-trip failed");
+    }
+
+    #[test]
+    fn test_roundtrip_fstring() {
+        let lexer = PythonLexer::new();
+        let input = r#"print(f"Current date: {datetime.now()}")"#;
+        let tokens = lexer.get_tokens(input);
+        assert_eq!(reconstruct(&tokens), input, "F-string round-trip failed");
+    }
+
+    #[test]
+    fn test_roundtrip_fstring_multiple_interpolations() {
+        let lexer = PythonLexer::new();
+        let input = r#"f"{a} and {b}""#;
+        let tokens = lexer.get_tokens(input);
+        assert_eq!(reconstruct(&tokens), input, "F-string with multiple interpolations failed");
+    }
+
+    #[test]
+    fn test_roundtrip_empty_string() {
+        let lexer = PythonLexer::new();
+        let input = r#""""#;
+        let tokens = lexer.get_tokens(input);
+        assert_eq!(reconstruct(&tokens), input, "Empty string round-trip failed");
+    }
+
+    #[test]
+    fn test_roundtrip_string_with_escape() {
+        let lexer = PythonLexer::new();
+        let input = r#""Hello\nWorld""#;
+        let tokens = lexer.get_tokens(input);
+        assert_eq!(reconstruct(&tokens), input, "String with escape round-trip failed");
+    }
+
+    #[test]
+    fn test_roundtrip_triple_quoted() {
+        let lexer = PythonLexer::new();
+        let input = r#""""Hello World""""#;
+        let tokens = lexer.get_tokens(input);
+        assert_eq!(reconstruct(&tokens), input, "Triple-quoted string round-trip failed");
+    }
+
+    #[test]
+    fn test_roundtrip_mixed_quotes() {
+        let lexer = PythonLexer::new();
+        let input = r#"print('Hello') + "World""#;
+        let tokens = lexer.get_tokens(input);
+        assert_eq!(reconstruct(&tokens), input, "Mixed quotes round-trip failed");
+    }
+
+    #[test]
+    fn test_roundtrip_full_script() {
+        let lexer = PythonLexer::new();
+        let input = r#"import sys
+from datetime import datetime
+print(f"Current date: {datetime.now()}")
+print(f"Current time: {datetime.now().time()}")
+print(f"CPU usage: {sys.cpu_percent()}%")
+print(f"Memory usage: {sys.getsizeof(1)} bytes")
+print(f"Python version: {sys.version}")
+print(f"Platform: {sys.platform}")
+print(f"Number of processors: {len(sys.stdin)}")
+print("Script complete!")
+"#;
+        let tokens = lexer.get_tokens(input);
+        assert_eq!(reconstruct(&tokens), input, "Full script round-trip failed");
     }
 }

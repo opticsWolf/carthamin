@@ -117,7 +117,7 @@ impl JavaScriptLexer {
             "Number", "Object", "RegExp", "String", "Promise", "Proxy", "decodeURI",
             "decodeURIComponent", "encodeURI", "encodeURIComponent", "eval",
             "isFinite", "isNaN", "parseFloat", "parseInt", "DataView",
-            "document", "window", "globalThis", "global", "Symbol", "Intl",
+            "document", "window", "globalThis", "global", "arguments", "Symbol", "Intl",
             "WeakSet", "WeakMap", "Set", "Map", "Reflect", "JSON", "Atomics",
             "Int8Array", "Int16Array", "Int32Array", "BigInt64Array",
             "Float32Array", "Float64Array", "Uint8ClampedArray",
