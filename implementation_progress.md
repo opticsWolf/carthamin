@@ -1,8 +1,8 @@
 # Carthamin Implementation Progress
 
 **Last Updated**: 2026-06-21
-**Overall Status**: Core lexer engine, 458 lexers (28 manual + 430 auto-generated), 8 formatters.
-**Test Results**: Rust: 195 passed | Python Compat: 5310 passed | Python Style: 23 passed | Unicode Parity: 12 passed | **Total: 5540 passed, 0 failed**
+**Overall Status**: Core lexer engine, 458 lexers (28 manual + 430 auto-generated), 8 formatters, ExtendedRegexLexer.
+**Test Results**: Rust: 206 passed | Python Compat: 5310 passed | Python Style: 23 passed | Unicode Parity: 12 passed | **Total: 5551 passed, 0 failed**
 
 ---
 
@@ -44,7 +44,7 @@ The refactor plan maps the Pygments Python library to a Rust implementation with
 | 1 | Token System | ✅ Complete | Hierarchical TokenType enum, PyO3 Token class |
 | 2 | Style System | ✅ Complete | Style/StyleAttributes, 49 styles via generator |
 | 3 | Core Utilities | ✅ Complete | regex_opt, html_escape, utility functions |
-| 4 | Scanner & Lexer Engine | ✅ Complete | RegexScanner, Lexer trait, RegexLexer state machine |
+| 4 | Scanner & Lexer Engine | ⚠️ Partial | RegexScanner, Lexer trait, RegexLexer state machine, ExtendedRegexLexer |
 | 5 | Filter System | ✅ Complete | Filter trait, 5 built-in filters |
 | 6 | Core Formatters | ✅ Complete | HTML, Terminal, Terminal256 |
 | 7 | Additional Formatters | ⚠️ Partial | LaTeX, RTF, Groff, SVG, IRC, BBCode, etc. |
@@ -128,7 +128,7 @@ The token system is the foundation of the entire lexer architecture. It mirrors 
 
 ### 2.4 Scanner & Lexer Engine
 
-**Files**: `carthamin-core/src/scanner.rs`, `carthamin-core/src/lexer/mod.rs`, `carthamin-core/src/lexer/regex_lexer.rs`
+**Files**: `carthamin-core/src/scanner.rs`, `carthamin-core/src/lexer/mod.rs`, `carthamin-core/src/lexer/regex_lexer.rs`, `carthamin-core/src/lexer/extended.rs`
 
 #### Scanner (`scanner.rs`)
 
@@ -142,9 +142,23 @@ The token system is the foundation of the entire lexer architecture. It mirrors 
 - `RegexLexer` struct with state stack, rule iteration, push/pop state management
 - `LexerRule` / `LexerAction` enums for pattern-action pairs
 - `words()` helper for keyword regex generation
+- **Bug fix**: `LexerAction::Noop` now emits `rule.pattern.token` (was silently consuming text)
+
+**Extended Lexer (`lexer/extended.rs`):**
+- `ExtendedRegexLexer` — full state machine with context-aware tokenization, EOL reset, `using()`, `bygroups()`
+- `DelegatingLexer` — two-lexer delegation (language lexer + root lexer re-scan) matching Pygments' `do_insertions()` algorithm
+- `LexerContext` — mutable context for debugging/profiling
+- `ExtendedRule` / `ExtendedAction` / `ExtendedState` — extended enums for `bygroups()`, `using()`, `push()`, `pop()`
+- `bygroups()` helper — emit multiple tokens from capture groups
+- `using()` / `using_this()` helpers — delegate to other lexers or self
+- `include()` / `inherit` resolution — macro-like state expansion at lexer construction time
+- `combined()` state merging — combine multiple states into single rule set
+- `RegistryFactory` — registry-based lexer factory for `using()` lookups
+- `from_lexer_rule()` — convert `RegexLexer` rules to `ExtendedRule`
 
 **Test Coverage:**
 - Inline unit tests in `scanner.rs` and `lexer/mod.rs`
+- 11 tests in `lexer/extended.rs`: basic tokenization, `bygroups`, `bygroups` with skipped groups, state push/pop, include resolution, inherit resolution, combined states, EOL reset, delegating lexer, `using_this`, `using` with factory
 
 ---
 
@@ -335,34 +349,25 @@ The lexer code generator is a comprehensive Python script that:
 - `RegexLexer` implements basic state machine with push/pop states
 - `Lexer` trait with `get_tokens()` and `get_tokens_unprocessed()`
 - `words()` helper for keyword regex generation
+- **Bug fix**: `LexerAction::Noop` in `RegexLexer::tokenize()` now emits `rule.pattern.token` (was silently consuming text — affected all `LexerRule::token()` rules)
 
-**Missing:**
-- `ExtendedRegexLexer` — inheritance model for lexer hierarchies (e.g., `Python3Lexer` extends `PythonLexer`)
-- `bygroups()` filter — emit multiple tokens from a single regex match with capture groups
-- `using()` filter — recursive lexer invocation for embedded languages (e.g., HTML with embedded JS/CSS)
-- `include()` directive — reference other rule sets within a lexer
-- `inherit` directive — lexer inheritance chain resolution
-- `DelegatingLexer` — delegate to another lexer for embedded content
-- `combined()` — combine multiple states into a single pattern
-- `this` — reference to the current lexer
+**Implemented (`lexer/extended.rs`):**
+- `ExtendedRegexLexer` — context-aware state machine with EOL reset ✅
+- `bygroups()` — emit multiple tokens from capture groups ✅
+- `using()` / `using_this()` — delegate to other lexers or self ✅
+- `include()` — reference other rule sets within a lexer ✅
+- `inherit` — lexer inheritance chain resolution ✅
+- `combined()` — combine multiple states into single rule set ✅
+- `DelegatingLexer` — two-lexer delegation with `do_insertions()` algorithm ✅
+- `LexerContext` — mutable context for debugging/profiling ✅
+- `RegistryFactory` — registry-based lexer factory for `using()` lookups ✅
+- `from_lexer_rule()` — convert `RegexLexer` rules to `ExtendedRule` ✅
+- 11 unit tests covering all features ✅
 
-**What's Involved:**
-1. **Extended Regex Lexer**: Add a new `ExtendedRegexLexer` struct that extends `RegexLexer` with inheritance support. The lexer must resolve `inherit` chains at construction time, merging parent rules with child rules (child takes precedence). This requires a registry-based lookup for parent lexers.
-
-2. **bygroups() Filter**: Implement a new `LexerAction::bygroups(Vec<Token>)` variant that, on a regex match with N capture groups, emits N tokens with the specified token types. This requires the scanner to support capture group extraction, which the current `TokenPattern` structure does not (it only supports `groups: Option<Vec<Token>>` for recursive re-tokenization).
-
-3. **using() Filter**: Implement a new `LexerAction::using(LexerRef)` variant that, on a match, pushes the matched content onto a sub-lexer for recursive tokenization. This requires maintaining a lexer stack alongside the state stack.
-
-4. **include() Directive**: Implement `include('state_name')` as a macro-like expansion at lexer construction time. The lexer must resolve all `include` references before building the final rule set.
-
-5. **DelegatingLexer**: A new `DelegatingLexer` struct that wraps another lexer and delegates tokenization based on a mapping. This is used by lexers like `DjangoLexer` which delegates to the underlying HTML lexer.
-
-**Estimated Effort**: 40-60 hours. This is a significant architectural change requiring:
-- New `LexerAction` variants
-- Capture group extraction in `TokenPattern`
-- Lexer stack management in `RegexLexer`
-- Inheritance chain resolution in the registry
-- Comprehensive tests for each new feature
+**Remaining:**
+- Integration with auto-generated template lexers (78 skipped lexers)
+- PyO3 bindings for `ExtendedRegexLexer`
+- End-to-end tests with real template lexers (Django, Jinja, etc.)
 
 ---
 
@@ -601,11 +606,11 @@ The following roadmap prioritizes gaps by impact and dependency:
 ### Current Test Results
 | Category | Tests | Passed | Failed |
 |----------|-------|--------|--------|
-| Rust Unit Tests | 195 | 195 | 0 |
+| Rust Unit Tests | 206 | 206 | 0 |
 | Python Compatibility Tests | 5310 | 5310 | 0 |
 | Python Style Compatibility Tests | 23 | 23 | 0 |
 | Unicode Parity Tests | 12 | 12 | 0 |
-| **Total** | **5540** | **5540** | **0** |
+| **Total** | **5551** | **5551** | **0** |
 
 ### Test Coverage by Component
 | Component | Rust Tests | Python Tests | Coverage |
@@ -613,7 +618,7 @@ The following roadmap prioritizes gaps by impact and dependency:
 | Token System | 4 | 1 | Full |
 | Style System | 4 | 23 | Full |
 | Core Utilities | 2 | 0 | Partial |
-| Scanner/Lexer Engine | 1 | 0 | Partial |
+| Scanner/Lexer Engine | 12 | 0 | Full (incl. ExtendedRegexLexer) |
 | Filter System | 3 | 0 | Partial |
 | Formatters | 10 | 2 | Partial |
 | Language Lexers | 171 | 0 | Full (458 lexers) |
@@ -623,7 +628,7 @@ The following roadmap prioritizes gaps by impact and dependency:
 | Lexer Generator | 0 | 0 | ✅ Complete |
 
 ### Known Test Gaps
-1. **Extended Regex Lexer**: No tests until `ExtendedRegexLexer` is implemented.
+1. **Extended Regex Lexer**: 11 tests covering core features ✅. Integration tests with real template lexers needed.
 2. **Remaining Lexers**: No tests until generator is complete. ✅ Fixed
 3. **Additional Formatters**: No tests until formatters are ported.
 4. **Performance**: No benchmarks yet.
@@ -645,7 +650,8 @@ The following roadmap prioritizes gaps by impact and dependency:
 | `carthamin-core/src/regexopt.rs` | Regex optimization | ✅ Complete |
 | `carthamin-core/src/scanner.rs` | RegexScanner | ✅ Complete |
 | `carthamin-core/src/lexer/mod.rs` | Lexer trait, RegexLexer | ✅ Complete |
-| `carthamin-core/src/lexer/regex_lexer.rs` | Extended regex lexer exports | ⚠️ Stub |
+| `carthamin-core/src/lexer/regex_lexer.rs` | Extended regex lexer exports | ✅ Complete |
+| `carthamin-core/src/lexer/extended.rs` | ExtendedRegexLexer, DelegatingLexer, bygroups, using, include, inherit, combined | ✅ Complete |
 | `carthamin-core/src/filter.rs` | Filter trait, built-in filters | ✅ Complete |
 | `carthamin-core/src/registry.rs` | Lexer/Formatter registries | ✅ Partial |
 
@@ -788,10 +794,10 @@ Carthamin has successfully implemented the core lexer engine, token system, styl
 - Core lexer engine, token system, style system, filter system
 - 458 lexers (28 manual + 430 auto-generated via `generators/gen_lexers.py`)
 - 8 formatters (HTML, Terminal, Terminal256, TerminalTrueColor, Null, RawToken, Testcase, IRC, BBCode)
-- 195 Rust tests + 5310 Python compatibility tests passing
+- 206 Rust tests + 5310 Python compatibility tests passing
 
 ### Remaining
-1. **Extended Regex Lexer** (HIGH) — template/delegating lexers (78 skipped)
+1. **Extended Regex Lexer** (HIGH) — ✅ Core features implemented. Integration with template lexers needed.
 2. **Registry completeness** (MEDIUM) — `guess_lexer()`, full registry
 3. **Additional formatters** (MEDIUM) — 5 formatters remaining (LaTeX, RTF, Groff, SVG, PangoMarkup)
 4. **PyO3 bindings** (LOW-MEDIUM) — filters, formatters, lexer classes

@@ -45,19 +45,20 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 - [x] Port `html_escape()`, `shebang_matches()`, `doctype_matches()`, `looks_like_xml()`
 - [x] Verify: regex_opt produces identical patterns
 
-## Phase 4: Scanner & Lexer Engine (Status: COMPLETE)
+## Phase 4: Scanner & Lexer Engine (Status: PARTIAL)
 
-**Files**: `src/lexer/mod.rs`, `src/lexer/regex_lexer.rs`, `src/scanner.rs`
+**Files**: `src/lexer/mod.rs`, `src/lexer/regex_lexer.rs`, `src/lexer/extended.rs`, `src/scanner.rs`
 **Tests**: inline unit tests
 
 - [x] Port `RegexScanner` using `regex::RegexSet`
 - [x] Port `Lexer` trait with `get_tokens()`, `get_tokens_unprocessed()`
 - [x] Port `RegexLexer` state machine (state stack, rule iteration, push/pop)
-- [ ] Port `ExtendedRegexLexer` inheritance model
-- [ ] Port `bygroups()`, `using()`, `include()`, `inherit`, `words()` filters
-- [ ] Port `DelegatingLexer` pattern
+- [x] Port `ExtendedRegexLexer` inheritance model
+- [x] Port `bygroups()`, `using()`, `include()`, `inherit`, `combined()` filters
+- [x] Port `DelegatingLexer` pattern with `do_insertions()` algorithm
 - [ ] PyO3 bindings: `Lexer` base class, `RegexLexer` with `tokens` dict
 - [x] Verify: state machine produces identical token streams for test cases
+- [x] Fix: `LexerAction::Noop` bug (was silently consuming text for all `LexerRule::token()` rules)
 
 ## Phase 5: Filter System (Status: COMPLETE)
 
@@ -243,7 +244,7 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 | 1: Token | ✅ Complete | 1/1 | 2/2 |
 | 2: Style | ✅ Complete | 2/2 | 4/4 |
 | 3: Utilities | ✅ Complete | 2/2 | 2/2 |
-| 4: Scanner/Lexer | ✅ Complete | 3/3 | 1/1 |
+| 4: Scanner/Lexer | ⚠️ Partial | 4/4 | 12/12 |
 | 5: Filters | ✅ Complete | 1/2 | 1/1 |
 | 6: Core Formatters | ✅ Complete | 3/4 | 2/2 |
 | 7: Extra Formatters | ⚠️ Partial | 4/10 | 10/11 |
@@ -262,10 +263,10 @@ Phased migration of Pygments → Rust with PyO3 bindings.
 - Core lexer engine, token system, style system, filter system
 - 458 lexers (28 manual + 430 auto-generated via `generators/gen_lexers.py`)
 - 8 formatters (HTML, Terminal, Terminal256, TerminalTrueColor, Null, RawToken, Testcase, IRC, BBCode)
-- 195 Rust tests + 5310 Python compatibility tests passing
+- 206 Rust tests + 5310 Python compatibility tests passing
 
 ### Remaining
-1. **Extended Regex Lexer** (HIGH) — template/delegating lexers (78 skipped)
+1. **Extended Regex Lexer** (HIGH) — ✅ Core features implemented (`ExtendedRegexLexer`, `DelegatingLexer`, `bygroups()`, `using()`, `include()`, `inherit`, `combined()`). Integration with template lexers needed.
 2. **Registry completeness** (MEDIUM) — `guess_lexer()`, full registry
 3. **Additional formatters** (MEDIUM) — 5 formatters remaining (LaTeX, RTF, Groff, SVG, PangoMarkup)
 4. **PyO3 bindings** (LOW-MEDIUM) — filters, formatters, lexer classes

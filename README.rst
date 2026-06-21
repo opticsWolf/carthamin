@@ -53,6 +53,7 @@ Carthamin mirrors Pygments' modular architecture, ported to idiomatic Rust:
 | **Scanner & Lexer** | ``src/scanner.rs``          | ✅ Complete         |
 |                     | ``src/lexer/mod.rs``        |                     |
 |                     | ``src/lexer/regex_lexer.rs``|                     |
+|                     | ``src/lexer/extended.rs``   | ✅ ExtendedRegexLexer |
 +---------------------+-----------------------------+---------------------+
 | **Filter System**   | ``src/filter.rs``           | ✅ Complete         |
 +---------------------+-----------------------------+---------------------+
@@ -71,10 +72,10 @@ Carthamin mirrors Pygments' modular architecture, ported to idiomatic Rust:
 Lexers
 ------
 
-**30 lexers ported**, **129 lexer tests**, **195 total tests** (all passing)::
+**30 lexers ported**, **129 lexer tests**, **206 total tests** (all passing)::
 
     cargo test
-    # test result: ok. 195 passed; 0 failed
+    # test result: ok. 206 passed; 0 failed
 
     pytest ../tests/
     # 5313 passed, 16 skipped
@@ -155,6 +156,7 @@ Project Structure
     │       ├── lexer/           # Lexer engine + 30 ported lexers
     │       │   ├── mod.rs       # Lexer trait, RegexLexer, LexerRule
     │       │   ├── regex_lexer.rs
+    │       │   ├── extended.rs  # ExtendedRegexLexer, DelegatingLexer, bygroups, using, include, inherit
     │       │   ├── python.rs, javascript.rs, ...
     │       │   └── ...
     │       └── bindings/        # PyO3 Python bindings
@@ -219,7 +221,7 @@ See `refactor_plan.md <refactor_plan.md>`_ for the full phased plan.
 +----------+---------------------+-------+----------------------+
 | 3        | Core Utilities      | ✅    | ✅                   |
 +----------+---------------------+-------+----------------------+
-| 4        | Scanner & Lexer     | ✅    | ✅                   |
+| 4        | Scanner & Lexer     | ⚠️ Partial | ✅ core + extended   |
 +----------+---------------------+-------+----------------------+
 | 5        | Filter System       | ✅    | ✅                   |
 +----------+---------------------+-------+----------------------+

@@ -1,4 +1,5 @@
 pub mod regex_lexer;
+pub mod extended;
 pub mod python;
 pub mod javascript;
 pub mod htmlxml;
@@ -122,8 +123,8 @@ pub enum LexerAction {
     TokenAndPush(Token, String),
     /// No action (skip this match).
     Noop,
-    // Delegate to another lexer (not yet implemented).
-    // Using(Token),
+    /// Delegate to another lexer by name.
+    Using(String),
 }
 
 impl LexerAction {
@@ -211,6 +212,7 @@ impl RegexLexer {
                             }
                             LexerAction::ByGroups(groups) => {
                                 let captures = rule.pattern.regex.captures(&text[pos..]).unwrap();
+                                let mut any_group = false;
                                 for (i, _group_token) in groups.iter().enumerate() {
                                     if let Some(Some(token)) = groups.get(i) {
                                         if let Some(c) = captures.get(i + 1) {
@@ -221,18 +223,36 @@ impl RegexLexer {
                                                     token_type: *token,
                                                     text: group_text.to_string(),
                                                 });
+                                                any_group = true;
                                             }
                                         }
                                     }
                                 }
                                 // If no groups produced tokens, use the whole match
-                                if tokens.is_empty() || tokens.last().map(|t| t.index).unwrap_or(0) == index {
+                                if !any_group {
                                     tokens.push(TokenStreamItem {
                                         index,
                                         token_type: Token::TEXT,
                                         text: matched_text.to_string(),
                                     });
                                 }
+                            }
+                            LexerAction::Noop => {
+                                // Use the pattern's default token type
+                                tokens.push(TokenStreamItem {
+                                    index,
+                                    token_type: rule.pattern.token,
+                                    text: matched_text.to_string(),
+                                });
+                            }
+                            LexerAction::Using(_lexer_name) => {
+                                // Using requires ExtendedRegexLexer with a factory;
+                                // in basic RegexLexer, fall through to pattern token
+                                tokens.push(TokenStreamItem {
+                                    index,
+                                    token_type: rule.pattern.token,
+                                    text: matched_text.to_string(),
+                                });
                             }
                             _ => {
                                 tokens.push(TokenStreamItem {
